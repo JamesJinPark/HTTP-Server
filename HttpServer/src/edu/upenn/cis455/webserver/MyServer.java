@@ -42,6 +42,7 @@ public class MyServer {
 				System.out.println(msg);
 					
 				response.setBody(msg);
+				
 				//make sure threads exit				
 				ShutdownHook.shutdown();
 			}
