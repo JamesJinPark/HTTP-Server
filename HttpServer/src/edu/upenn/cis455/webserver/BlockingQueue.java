@@ -12,28 +12,31 @@ public class BlockingQueue<E>{
 	}
 	
 	public synchronized void enqueue(E object){
-		while(this.isFull()){
+		while(this.isFull() && !ShutdownHook.isShutdown.get()){
 			try {
 				wait();
 			} catch (InterruptedException e) {
-				e.printStackTrace();
+				Thread.currentThread().interrupt();
+				break;
 			}
 		}
-		if(this.isEmpty()){  //hmmm should ask around about what this is actually doing and whether this is in the right place
+		if(!this.isFull()){  
 			notifyAll();
 		}
 		this.queue.add(object);
 	}
 	
 	public synchronized E dequeue(){		
-		while(this.isEmpty()){
+		while(this.isEmpty() && !ShutdownHook.isShutdown.get()){
 			try {
 				wait();
 			} catch (InterruptedException e) {
-				e.printStackTrace();
+				Thread.currentThread().interrupt();
+				//allow threads to die
+				break;
 			}
 		}
-		if(this.isFull()){ //hmmm should ask around about what this is actually doing and whether this is in the right place
+		if(!this.isEmpty()){ 
 			notifyAll();
 		}
 		return this.queue.poll();
@@ -46,5 +49,5 @@ public class BlockingQueue<E>{
 	private boolean isFull(){
 		return this.queue.size() == this.maxLength;
 	}
-		
+
 }

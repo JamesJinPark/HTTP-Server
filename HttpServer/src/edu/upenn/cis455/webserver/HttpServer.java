@@ -31,58 +31,54 @@ public class HttpServer {
 	
 	public void runServer(){		
 		
-		ThreadPool threads = new ThreadPool(100);//creates threadpool of 100 threads and BlockingQueue of size 100;
+		final ThreadPool threads = new ThreadPool(100);//creates threadpool of 100 threads and BlockingQueue of size 100;
+		try{
+			ServerSocket serverSocket = new ServerSocket(this.port);
+			final ThreadManager manager = new ThreadManager(threads, serverSocket);
+			manager.start();
+			final Socket socket = serverSocket.accept();
 
-		try(ServerSocket serverSocket = new ServerSocket(this.port)){
 			while(!ShutdownHook.isShutdown.get()){
-				try( //all these are closeable by putting them in as arguments for try()
-					Socket socket = serverSocket.accept();
-					InputStreamReader reader = new InputStreamReader(socket.getInputStream());
-					BufferedReader in = new BufferedReader(reader);
-						
-					PrintWriter out = new PrintWriter(socket.getOutputStream());
-				) {
-					
-					Runnable runnable = new Runnable(){
-						@Override
-						public void run(){
-						
-							HttpRequest request = httpRequestParser.parse(in);
-							HttpResponse response = new HttpResponse();
-		
-							Route requestedRoute = Route.of(request.method, request.path);
-							HttpRequestHandler handler = routes.get(requestedRoute);
-		
-							if(handler == null){
-								handler = notFoundHandler;
-							}
-												
-							handler.handle(request, response);
-							out.println("HTTP/1.1 " + response.getStatus());
-							for(Map.Entry<String, Object> header: response.headers.entrySet()){
-								out.println(header.getKey() + ": " + header.getValue());
-							}
-							
-							if(response.getBody().length() > 0){
-								out.println("");
-								out.println(response.getBody());
-							}
-							out.flush();
+
+				Runnable runnable = new Runnable(){
+					@Override
+					public void run(){
+						try (
+						InputStreamReader reader = new InputStreamReader(socket.getInputStream());
+						BufferedReader in = new BufferedReader(reader);
+						PrintWriter out = new PrintWriter(socket.getOutputStream());){
+
+						HttpRequest request = httpRequestParser.parse(in);
+						HttpResponse response = new HttpResponse();
+
+						Route requestedRoute = Route.of(request.method, request.path);
+						HttpRequestHandler handler = routes.get(requestedRoute);
+
+						if(handler == null){
+							handler = notFoundHandler;
 						}
-					};
-					threads.run(runnable);//adds this instance of runnable (request) to the queue of the thread pool
-					
-				}catch(IOException e){
-					e.printStackTrace();
-				}
-			}
-			
-		}catch(Exception e){
+											
+						handler.handle(request, response);
+						out.println("HTTP/1.1 " + response.getStatus());
+						for(Map.Entry<String, Object> header: response.headers.entrySet()){
+							out.println(header.getKey() + ": " + header.getValue());
+						}
+						
+						if(response.getBody().length() > 0){
+							out.println("");
+							out.println(response.getBody());
+						}
+						} catch (IOException e) {
+							e.printStackTrace();
+						} //end of nested try with resources
+					} //end of outside try with resources
+				}; //end of runnable
+				threads.run(runnable);//adds this instance of runnable (request) to the queue of the thread pool
+			}//end of while loop
+		} catch(Exception e) {
 			System.err.println("Error! Could not connect to socket:");
 			e.printStackTrace();
 			System.exit(1); //server shuts down due to error
 		}
-		threads.killAllThreads(); 
-		System.exit(0);
 	}
 }

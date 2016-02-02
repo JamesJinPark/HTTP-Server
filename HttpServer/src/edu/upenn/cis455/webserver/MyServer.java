@@ -40,10 +40,7 @@ public class MyServer {
 			public void handle(HttpRequest request, HttpResponse response){
 				String msg = ("Shutting down server.");
 				System.out.println(msg);
-					
-				response.setBody(msg);
-				
-				//make sure threads exit				
+				response.setBody(msg);			
 				ShutdownHook.shutdown();
 			}
 		});
