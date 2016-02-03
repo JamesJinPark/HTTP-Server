@@ -30,5 +30,4 @@ public class DefaultRequestParser implements HttpRequestParser{
 		}
 		return null;
 	}
-	
 }

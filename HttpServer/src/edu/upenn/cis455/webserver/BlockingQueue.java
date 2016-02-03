@@ -26,15 +26,9 @@ public class BlockingQueue<E>{
 		this.queue.add(object);
 	}
 	
-	public synchronized E dequeue(){		
+	public synchronized E dequeue() throws InterruptedException{		
 		while(this.isEmpty() && !ShutdownHook.isShutdown.get()){
-			try {
-				wait();
-			} catch (InterruptedException e) {
-				Thread.currentThread().interrupt();
-				//allow threads to die
-				break;
-			}
+			wait();
 		}
 		if(!this.isEmpty()){ 
 			notifyAll();

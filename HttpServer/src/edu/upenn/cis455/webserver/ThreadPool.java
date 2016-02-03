@@ -4,22 +4,21 @@ import java.util.*;
 
 public class ThreadPool {
 	private BlockingQueue<Runnable> queue = null;
-	private ArrayList<Worker> threads = new ArrayList<Worker>();
+	private List<Worker> threads = new ArrayList<Worker>();
 	
 	//Constructor
 	public ThreadPool(int numThreads){
-		queue = new BlockingQueue<Runnable>(numThreads);
+		queue = new BlockingQueue<>(numThreads);
 		for(int i = 0; i < numThreads; i++){
 			threads.add(new Worker(queue));
 		}
-		for(int j = 0; j< threads.size(); j++){
-			threads.get(j).start();
+		for(Worker thread : threads){
+			thread.start();
 		}
 	}
 	
 	public synchronized void run(Runnable task){
 		if(ShutdownHook.isShutdown.get())
-			System.out.println("Should not be here: " + ShutdownHook.isShutdown.get());
 			try {
 				throw new Exception("Threads in process of shutting down.");
 			} catch (Exception e) {
@@ -28,16 +27,25 @@ public class ThreadPool {
 		this.queue.enqueue(task);
 	}
 	
-	public void killAllThreads(){
-		System.out.println("In the killAllThreads method");
+	public String getThreadsStatus(String threadPath){
+		String temp = "";
+		for(Thread thread : threads){
+			if (thread.isAlive()){
+				temp += "Thread #" + thread.getId() + " status: "  + ((thread.getState() == Thread.State.WAITING) ? "waiting" : "Handing request to " + threadPath) + "<br>"; //kills thread by interrupting thread
+			}
+		}
+		return temp;
+	}
+	
+	public void killAllThreads() throws InterruptedException{
 		synchronized(threads){
 			for(Thread thread : threads){
-				System.out.println("Killing thread:" + thread.getId());
 				thread.interrupt(); //kills thread by interrupting thread
 			}
 		}
+		Thread.sleep(3000);
 		for(Thread thread : threads){
-			System.out.println(thread.getId() + " status: "  + thread.isAlive()); //kills thread by interrupting thread
+			System.out.println(thread.getId() + " status: "  + (thread.isAlive() ? "alive" : "dead")); //kills thread by interrupting thread
 		}
 	}
 }
