@@ -27,6 +27,27 @@ public class ThreadPool {
 		this.queue.enqueue(task);
 	}
 	
+	public int howManyThreadsAlive(){
+		int count = 0;
+		for(Thread thread : threads){
+			if (thread.isAlive()){
+				count += 1;
+				thread.interrupt();
+			}
+		}
+		return count;
+	}
+
+	@SuppressWarnings("deprecation")
+	public void emergencyShutdown(){
+		for(Thread thread : threads){
+			if (thread.isAlive()){
+				thread.stop();
+			}
+		}
+	}
+
+	
 	public String getThreadsStatus(String threadPath){
 		String temp = "";
 		for(Thread thread : threads){

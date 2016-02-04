@@ -10,7 +10,10 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.nio.file.Path;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.Map;
+import java.util.TimeZone;
 import java.util.regex.*;
 
 public class HttpServer {
@@ -18,16 +21,9 @@ public class HttpServer {
     final private int port;
 
     final private Path rootDir; 
-    
-    final HttpRequestHandler notFoundHandler = new HttpRequestHandler() {
-        public void handle(HttpRequest request, HttpResponse response) {
-            String body = "404 Page Not Found for Request:\n\n" + request;
-            response.setBody(body);
-            response.setStatus(404);
-        }
-    };
-    
-	final ThreadPool threads = new ThreadPool(100);//creates threadpool of 100 threads and BlockingQueue of size 100;
+
+     
+	final ThreadPool threads = new ThreadPool(20);//creates threadpool of 100 threads and BlockingQueue of size 100;
 
 	/*	Special URL control
 		Returns page with 
@@ -51,6 +47,19 @@ public class HttpServer {
 			response.setBody(msg);			            
         }
     };    
+    
+    
+    
+	//Special URL shutdown
+    final HttpRequestHandler shutdownHandler = new HttpRequestHandler() {
+	    public void handle(HttpRequest request, HttpResponse response){
+			String msg = ("Shutting down server.");
+			System.out.println(msg);
+			response.setBody(msg);			
+			ShutdownHook.shutdown();
+		}
+	};
+
     
     final private Map<Route, HttpRequestHandler> routes;
 
@@ -85,71 +94,189 @@ public class HttpServer {
 
                                 HttpRequest request = httpRequestParser.parse(in);
                                 HttpResponse response = new HttpResponse();
-
+                                String absoluteSpecialPath = null;
+                                if(request.headers.get("Host") != null){
+                                	absoluteSpecialPath = ("http://" + request.headers.get("Host"));
+                                } 
                             	System.out.println("Here is the request: \n" + request + "\n\nEnd of Transmission\n");
-                                
+                            	                            	
                                 Route requestedRoute = null;
                                 HttpRequestHandler handler = null;
+
+                            	if(request.method.toUpperCase().equals("HEAD") && !request.path.equals("/shutdown") && 
+                            			!request.path.equals(absoluteSpecialPath + "/shutdown") && 
+                            			!request.path.equals(absoluteSpecialPath + "/control") &&
+                            			!request.path.equals("/control") ){
+                            		request.isHead = true;
+                            		request.method = "GET";
+                            	} 
+                            	
+                            	if (request.method.toUpperCase().equals("HEAD") && request.path.equals("/shutdown") ||
+                            			request.path.equals(absoluteSpecialPath + "/shutdown") || 
+                            			request.path.equals(absoluteSpecialPath + "/control") ||
+                            			request.path.equals("/control")){
+                			        requestedRoute = Route.of(request.method, "405Error");
+                                	request.isError = true;
+                			        handler = routes.get(requestedRoute);   
+                            	} 
+                            	
                                 //complicated path
                                 String HTMLregex =  "([^\\s]+(\\.(?i)(html))$)";
                                 String ImageRegex = "([^\\s]+(\\.(?i)(jpg|png|gif|bmp|))$)";
+                                String pdfRegex =  "([^\\s]+(\\.(?i)(pdf))$)";
                                 Matcher htmlFinder = Pattern.compile(HTMLregex).matcher(request.path);
                                 Matcher imageFinder = Pattern.compile(ImageRegex).matcher(request.path);
+                                Matcher pdfFinder = Pattern.compile(pdfRegex).matcher(request.path);
                                 
                                 File f = new File(rootDir + "/" + request.path);
-                				
+                                String absolutePath = null;
+                                if(request.headers.get("Host") != null){
+                                	request.path.replace("http://", "").replace(request.headers.get("Host"), "");
+                                }
+                                File absoluteFile = new File(rootDir + absolutePath);
+                                
                                 if(htmlFinder.find() && f.isFile()){
                                 	System.out.println("Successfully found html");
-                    			        requestedRoute = Route.of(request.method, "html");
-		                                handler = routes.get(requestedRoute);   
+                    			    requestedRoute = Route.of(request.method, "html");
+		                            handler = routes.get(requestedRoute);   
+                                }else if (htmlFinder.find() &&  absoluteFile.isFile()){
+                                	System.out.println("Successfully found html");
+                                	request.path = absolutePath;
+                    			    requestedRoute = Route.of(request.method, "html");
+		                            handler = routes.get(requestedRoute);   
                                 }else if (imageFinder.find() && f.isFile()){
                                 	System.out.println("Successfully found image");
+                                	requestedRoute = Route.of(request.method, "image");
+	                                handler = routes.get(requestedRoute);   
+                                }else if (imageFinder.find() && absoluteFile.isFile()){
+                                	System.out.println("Successfully found image");
+                                	request.path = absolutePath;
                                 	requestedRoute = Route.of(request.method, "image");
 	                                handler = routes.get(requestedRoute);   
                                 }else if (f.isDirectory()){
                                 	System.out.println("Successfully found directory");
                                 	requestedRoute = Route.of(request.method, "directory");
 	                                handler = routes.get(requestedRoute);   
+                                }else if (absoluteFile.isDirectory()){
+                                	System.out.println("Successfully found directory");
+                                	request.path = absolutePath;
+                                	requestedRoute = Route.of(request.method, "directory");
+	                                handler = routes.get(requestedRoute);   
+                                }else if (pdfFinder.find() && f.isFile()){
+                                	System.out.println("Successfully found pdf file.");
+                                	requestedRoute = Route.of(request.method, "pdf");
+	                                handler = routes.get(requestedRoute);   
+                                }else if (pdfFinder.find() && absoluteFile.isFile()){
+                                	System.out.println("Successfully found pdf file.");
+                                	request.path = absolutePath;
+                                	requestedRoute = Route.of(request.method, "pdf");
+	                                handler = routes.get(requestedRoute);   
+
+                                }else if (f.isFile()){
+                                	System.out.println("Treat like text file.");
+                                	requestedRoute = Route.of(request.method, "plainText");
+	                                handler = routes.get(requestedRoute);   
+                                }else if (absoluteFile.isFile()){
+                                	System.out.println("Treat like text file.");
+                                	request.path = absolutePath;
+                                	requestedRoute = Route.of(request.method, "plainText");
+	                                handler = routes.get(requestedRoute);   
                                 }else{ //root, special URLs
                                 	requestedRoute = Route.of(request.method, request.path);
 	                                handler = routes.get(requestedRoute);                                	
                                 }
-                            	
-                            	if (requestedRoute.method.equals(Route.of("GET", "/control").method)&& 
-                            			requestedRoute.path.equals(Route.of("GET", "/control").path)
+                            	if ((requestedRoute.method.equals(Route.of("GET", "/control").method)&& 
+                            			requestedRoute.path.equals(Route.of("GET", "/control").path)) || 
+                            			((requestedRoute.method.equals(Route.of("GET", absolutePath + "/control").method)&& 
+                                    			requestedRoute.path.equals(Route.of("GET", absolutePath + "/control").path)))
                             		){
                                 	handler = controlHandler;
                                 }
+                            	
+                            	//shutdown handler
+                            	if ((requestedRoute.method.equals(Route.of("GET", "/shutdown").method)&& 
+                            			requestedRoute.path.equals(Route.of("GET", "/shutdown").path)) || 
+                            			((requestedRoute.method.equals(Route.of("GET", absoluteSpecialPath + "/shutdown").method)&& 
+                                    			requestedRoute.path.equals(Route.of("GET", absoluteSpecialPath + "/shutdown").path)))
+                            		){
+                                	handler = shutdownHandler;
+                                }                            	
 
+                            	if(request.headers.get("Host") == null && request.version.equals("HTTP/1.1")){
+                                	requestedRoute = Route.of("GET", "400Error");
+                                	request.isError = true;
+	                                handler = routes.get(requestedRoute);
+                            	}
+                            	if(!request.method.equals("GET")){
+                                	requestedRoute = Route.of("GET", "501Error");
+                                	request.isError = true;
+                                	handler = routes.get(requestedRoute);                            		
+                            	}
+
+//                            	if(request.headers.get("If-Modified-Since") != null){
+//                                	requestedRoute = Route.of("GET", "501Error");
+//                                	request.isError = true;
+//                                	handler = routes.get(requestedRoute);                            		
+//                            	}
                                 if (handler == null) {
-                                    handler = notFoundHandler;
+                                	requestedRoute = Route.of("GET", "404Error");
+                                	request.isError = true;
+                                	handler = routes.get(requestedRoute);                                	
                                 }
-
+                            	
                                 handler.handle(request, response);
-                                out.println("HTTP/1.1 " + response.getStatus());
-                                System.out.println("HTTP/1.1 " + response.getStatus());//DELETE
+                                if(request.version.equals("HTTP/1.1")){
+                                	out.println("HTTP/1.1 100 Continue");
+                                	out.println("");
+                                }
+                                out.println("HTTP/1.1 " + response.getStatus()); //Response includes HTTP version
+                                
+                                final Date currentTime = new Date();
+                                final SimpleDateFormat dateTemplate = new SimpleDateFormat("EEE, d MMM yyyy hh:mm:ss");
+                                dateTemplate .setTimeZone(TimeZone.getTimeZone("GMT"));
+                                if(!request.isError){ //if the response is not error response
+	                                out.println("Date: "+dateTemplate.format(currentTime) + " GMT");//Response includes date
+	                                out.println("Server: James's HTTP Server"); //Response includes host
+	                                System.out.println("HTTP/1.1 " + response.getStatus());//DELETE
+                                }
                                 for (Map.Entry<String, Object> header : response.headers.entrySet()) {
                                     out.println(header.getKey() + ": " + header.getValue());
-                                    System.out.println(header.getKey() + ": " + header.getValue());//DELETE
+                                    System.out.println("test " + header.getKey() + ": " + header.getValue());//DELETE
                                 }
+                                if(!request.isHead){//if the request was not a HEAD method
+	                                if (response.getBody() != null && response.getBody().length() > 0) {
+	                                	System.out.println("Sending strings");
+	                                	out.println("");
+	                                    out.println(response.getBody());
+	                                    out.flush();
+	                                }
+	
+	                                if (response.getMyBytes() != null){
+	                                	System.out.println("Sending bytes");
+	                                	BufferedOutputStream output = new BufferedOutputStream(socket.getOutputStream());
 
-                                if (response.getBody() != null && response.getBody().length() > 0) {
-                                	System.out.println("Sending strings");
-                                	out.println("");
-                                    out.println(response.getBody());
+	                                	output.write(("HTTP/1.1 " + response.getStatus()).getBytes()); //Response includes HTTP version
+	                                	output.write("\r\n".getBytes());
+	                                	output.write(("Date: "+dateTemplate.format(currentTime) + " GMT").getBytes());//Response includes date
+	                                	output.write("\r\n".getBytes());
+	                                	output.write("Server: James's HTTP Server".getBytes()); //Response includes host
+		                                for (Map.Entry<String, Object> header : response.headers.entrySet()) {
+		                                	output.write("\r\n".getBytes());
+		                                    output.write((header.getKey() + ": " + header.getValue()).getBytes());
+		                                }
+	                                	output.write("\r\n".getBytes());
+	                                	output.write("\r\n".getBytes());
+	                                	output.write(response.getMyBytes(), 0, response.getMyBytes().length);
+	                                	output.flush();
+	                                	output.close();
+	                                }
+                            	} else{
+                                    out.flush();                            		
+                            	}
+                                out.println("Connection: close"); //Connection automatically closes. No persistent connection.
+                                if(request.headers.get("Connection").equals("close")){
+                                	//currently do nothing.  
                                 }
-
-                                if (response.getBytes() != null){
-                                	System.out.println("Sending bytes");
-                                	BufferedOutputStream output = new BufferedOutputStream(socket.getOutputStream());
-                                	output.write('\n');
-                                	output.write(response.getBytes());
-                                	output.flush();
-                                	output.close();
-                                }
-                                out.flush();
-
-                                System.out.println("Here is the response: \n" + response.getBytes() + "\n\nEnd of Transmission\n");
 
                             } catch (IOException e) {
                                 e.printStackTrace();
@@ -169,16 +296,33 @@ public class HttpServer {
             }
             serverSocket.close();
             threads.killAllThreads();
-
         } catch (Exception e) {
             System.err.println("Error! Could not connect to socket:");
             e.printStackTrace();
             System.exit(1); //server shuts down due to error
         }
         try {
-			Thread.sleep(3000);
+			Thread.sleep(2000);
 		} catch (InterruptedException e) {
 		}
-        System.out.println("Server safely shut down.");
+    	int count = 1; 
+        while(threads.howManyThreadsAlive() > 0 ){
+        	if (count < 6){
+        		System.out.println("Waiting on " + threads.howManyThreadsAlive() + " thread(s) to exit. " + "Loop #" + count);
+        	} else if (count < 10){
+        		System.out.println("Please close browser to allow thread(s) to exit the connection. " + "Loop #" + count);
+        	} else {
+        		System.out.println("Manually shutting down thread(s).");
+        		threads.emergencyShutdown();
+        		break;
+        	}
+			try {
+				count += 1;
+				Thread.sleep(3000);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}        	
+        }
+        System.out.println("Server shut down.");
     }
 }

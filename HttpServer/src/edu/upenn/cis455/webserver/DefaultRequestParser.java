@@ -12,6 +12,7 @@ public class DefaultRequestParser implements HttpRequestParser{
 			String[] parts = line.split("\\s+");
 			String method = parts[0];
 			String path = parts[1];
+			String version = parts[2];
 			Map<String, String> headers = new HashMap<>();
 			while((line = in.readLine()) != null && !line.isEmpty()){
 				//e.g: Host: localhost:90
@@ -24,7 +25,7 @@ public class DefaultRequestParser implements HttpRequestParser{
 					System.err.println("Could not parse header: " + line);
 				}	
 			}
-			return new HttpRequest(headers, method, path);
+			return new HttpRequest(headers, method, path, version);
 		}catch(IOException e){
 			e.printStackTrace();
 		}

@@ -7,7 +7,7 @@ public class HttpResponse {
 	public final Map<String, Object> headers = new HashMap<>();
 	private String body;//response body
 	private byte[] bytes;//response bytes
-	private int status = 200;
+	private String status = "200 OK";
 	
 	public HttpResponse(){
 		headers.put("Content-Type", "text/plain");
@@ -28,15 +28,15 @@ public class HttpResponse {
 		return this.body;
 	}
 
-	public byte[] getBytes(){
+	public byte[] getMyBytes(){
 		return this.bytes;
 	}
 
-	public void setStatus(int status){
+	public void setStatus(String status){
 		this.status = status;
 	}
 	
-	public int getStatus(){
+	public String getStatus(){
 		return this.status;
 	}
 }

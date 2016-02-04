@@ -12,10 +12,13 @@ public class MyServer {
 	
 	public static void main(String[] args){
 		
-		if(args.length != 2){ //must have two arguments
+		if(args.length > 3 || args.length< 2){ //must have two arguments
 			System.out.println("JamesJinPark\nSeas Login Name: jamespj");
 			System.exit(1);
-		}
+		} else if (args.length == 3){ //temporary place holder
+			System.out.println("JamesJinPark\nSeas Login Name: jamespj");
+			System.exit(1);			
+		} else {
 		
 		//Start server
 		int port = Integer.valueOf(args[0]).intValue(); //port number
@@ -23,7 +26,7 @@ public class MyServer {
 		
 		Map<Route, HttpRequestHandler> myRoutes = new HashMap<Route, HttpRequestHandler>();			
 		
-		//Retrive HTML pages 
+		//Retrieve HTML pages 
 		myRoutes.put(Route.of("GET", "html"), new HttpRequestHandler(){
 			@Override
  			public void handle(HttpRequest request, HttpResponse response){
@@ -37,6 +40,22 @@ public class MyServer {
 				}
 			}
 		});
+
+		//Retrieve plain text pages
+		myRoutes.put(Route.of("GET", "plainText"), new HttpRequestHandler(){
+			@Override
+ 			public void handle(HttpRequest request, HttpResponse response){
+				Path page = rootDir.resolve("." + request.path.toString());
+				try{
+					byte[] bytes = Files.readAllBytes(page);
+					response.setBody(new String(bytes));
+					response.headers.put("Content-Type", "text/plain");
+				}catch(IOException e){
+					e.printStackTrace();
+				}
+			}
+		});
+		
 
 		//Return directory pages 
 		myRoutes.put(Route.of("GET", "directory"), new HttpRequestHandler(){
@@ -53,25 +72,41 @@ public class MyServer {
 			}
 		});
 		
-		//Retrive images
+		//Retrieve images
 		myRoutes.put(Route.of("GET", "image"), new HttpRequestHandler(){
 			@Override
  			public void handle(HttpRequest request, HttpResponse response){
-				String imageFormat = request.path.substring(request.path.length() - 3);
-				System.out.println(imageFormat);
-				
+				String imageFormat = request.path.substring(request.path.length() - 3);				
 				Path page = rootDir.resolve("." + request.path.toString());
+				File file = new File(page.toString());
 				try{
-					byte[] bytes = Files.readAllBytes(page);
+					BufferedInputStream input = new BufferedInputStream(new FileInputStream(page.toString()));
+					byte[] bytes = new byte[(int)file.length()];
+					input.read(bytes, 0 , bytes.length);
+					input.close();
+					//byte[] bytes = Files.readAllBytes(page);
 					response.setBytes(bytes);
-					response.headers.put("Content-Type", "image/" + imageFormat);
-					System.out.println("I finished imagehandler");
+					response.headers.put("Content-Type", "image/" + ((imageFormat.equals("jpg")) ? "jpeg" : imageFormat));
 				}catch(IOException e){
 					e.printStackTrace();
 				}
 			}
 		});
 
+		//Retrieve pdf
+		myRoutes.put(Route.of("GET", "pdf"), new HttpRequestHandler(){
+			@Override
+ 			public void handle(HttpRequest request, HttpResponse response){
+				Path page = rootDir.resolve("." + request.path.toString());
+				try{
+					byte[] bytes = Files.readAllBytes(page);
+					response.setBytes(bytes);
+					response.headers.put("Content-Type", "application/pdf");
+				}catch(IOException e){
+					e.printStackTrace();
+				}
+			}
+		});
 				
 		//Retrieve page for / directory
 		myRoutes.put(Route.of("GET", "/"), new HttpRequestHandler(){
@@ -87,18 +122,46 @@ public class MyServer {
 				response.headers.put("Content-Type", "text/html");				
 			}
 		});
-				
-		//Special URL shutdown
-		myRoutes.put(Route.of("GET", "/shutdown"), new HttpRequestHandler(){
-			public void handle(HttpRequest request, HttpResponse response){
-				String msg = ("Shutting down server.");
-				System.out.println(msg);
-				response.setBody(msg);			
-				ShutdownHook.shutdown();
-			}
+			    
+		//400 status code handler
+		myRoutes.put(Route.of("GET", "400Error"), new HttpRequestHandler(){
+			public void handle(HttpRequest request, HttpResponse response) {
+	            String body = "400 Bad Request\n No header received: \n\n" + request;
+	            response.setBody(body);
+	            response.setStatus("400 Bad Request");
+	        }
+		});
+		
+		//404 status code handler
+		myRoutes.put(Route.of("GET", "404Error"), new HttpRequestHandler(){
+			public void handle(HttpRequest request, HttpResponse response) {
+	            String body = "404 Page Not Found for Request:\n\n" + request;
+	            response.setBody(body);
+	            response.setStatus("404 Not Found");
+	        }
+	    });
+	    
+
+		//405 status code handler
+		myRoutes.put(Route.of("GET", "405Error"), new HttpRequestHandler(){
+			public void handle(HttpRequest request, HttpResponse response) {
+	            String body = "405 Method Used Incorrectly for Request:\n\n" + request;
+	            response.setBody(body);
+	            response.setStatus("405 Method Not Allowed");
+	        }
+		});
+
+		//501 status code handler
+		myRoutes.put(Route.of("GET", "501Error"), new HttpRequestHandler(){
+			public void handle(HttpRequest request, HttpResponse response) {
+	            String body = "501 Method Not Recognized for Request:\n\n" + request;
+	            response.setBody(body);
+	            response.setStatus("501 Not Implemented");
+	        }
 		});
 
 		HttpServer httpServer = new HttpServer(port, rootDir, myRoutes);
 		httpServer.runServer();
+		}
 	}
 }
