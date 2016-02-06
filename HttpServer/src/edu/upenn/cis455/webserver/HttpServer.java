@@ -10,6 +10,7 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.nio.file.Path;
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Map;
@@ -22,7 +23,6 @@ public class HttpServer {
 
     final private Path rootDir; 
 
-     
 	final ThreadPool threads = new ThreadPool(20);//creates threadpool of 100 threads and BlockingQueue of size 100;
 
 	/*	Special URL control
@@ -73,7 +73,7 @@ public class HttpServer {
 
     public void runServer() {
 
-        try (ServerSocket serverSocket = new ServerSocket(this.port)) {
+        try (ServerSocket serverSocket = new ServerSocket(this.port, 100)) {
             serverSocket.setSoTimeout(200); // timeout so we can periodically check flag
 
             while (!ShutdownHook.isShutdown.get()) {
@@ -116,7 +116,6 @@ public class HttpServer {
                             			request.path.equals(absoluteSpecialPath + "/control") ||
                             			request.path.equals("/control")){
                 			        requestedRoute = Route.of(request.method, "405Error");
-                                	request.isError = true;
                 			        handler = routes.get(requestedRoute);   
                             	} 
                             	
@@ -124,10 +123,15 @@ public class HttpServer {
                                 String HTMLregex =  "([^\\s]+(\\.(?i)(html))$)";
                                 String ImageRegex = "([^\\s]+(\\.(?i)(jpg|png|gif|bmp|))$)";
                                 String pdfRegex =  "([^\\s]+(\\.(?i)(pdf))$)";
+                                String relativePathRegex = "([^\\s]+(\\.(?i)(.))$)";
                                 Matcher htmlFinder = Pattern.compile(HTMLregex).matcher(request.path);
                                 Matcher imageFinder = Pattern.compile(ImageRegex).matcher(request.path);
                                 Matcher pdfFinder = Pattern.compile(pdfRegex).matcher(request.path);
+                                Matcher relativePathFinder = Pattern.compile(relativePathRegex).matcher(request.path);
                                 
+                                if(relativePathFinder.find()){
+                                	request.path = request.path.substring(0, request.path.lastIndexOf('/'));
+                                }
                                 File f = new File(rootDir + "/" + request.path);
                                 String absolutePath = null;
                                 if(request.headers.get("Host") != null){
@@ -204,24 +208,53 @@ public class HttpServer {
 
                             	if(request.headers.get("Host") == null && request.version.equals("HTTP/1.1")){
                                 	requestedRoute = Route.of("GET", "400Error");
-                                	request.isError = true;
 	                                handler = routes.get(requestedRoute);
                             	}
-                            	if(!request.method.equals("GET")){
+                            	if(!request.method.equals("GET") || request.method.equals("HEAD")){
                                 	requestedRoute = Route.of("GET", "501Error");
-                                	request.isError = true;
                                 	handler = routes.get(requestedRoute);                            		
                             	}
 
-//                            	if(request.headers.get("If-Modified-Since") != null){
-//                                	requestedRoute = Route.of("GET", "501Error");
-//                                	request.isError = true;
-//                                	handler = routes.get(requestedRoute);                            		
-//                            	}
-                                if (handler == null) {
+                            	if (handler == null) {
                                 	requestedRoute = Route.of("GET", "404Error");
                                 	request.isError = true;
                                 	handler = routes.get(requestedRoute);                                	
+                                } else {//handler is not null but we need to check if-modified header	
+	                            	if(request.headers.get("If-Modified-Since") != null && 
+	                            			request.version.equals("HTTP/1.1")){
+	                            		if (request.method.equals("GET")){
+	                            			File file = new File("." + request.path);
+	                            			boolean tempIsModified = false;
+											try {
+												tempIsModified = httpRequestParser.checkDate(request.headers.get("If-Modified-Since"), file);
+											} catch (ParseException e) {
+												e.printStackTrace();
+											}
+	                            			if(!tempIsModified){
+	                                        	requestedRoute = Route.of("GET", "304Error"); //Not modified error. sets isModified to false
+	    	                                	handler = routes.get(requestedRoute);                            			
+	                            			}
+	                            		} else {//If-Modified-Since does not work methods other than "GET"
+	                                    	requestedRoute = Route.of("GET", "501Error"); 
+		                                	handler = routes.get(requestedRoute);                            			
+	                            		}
+	                            	}
+	
+	                            	if(request.headers.get("If-Unmodified-Since") != null && 
+	                            			request.version.equals("HTTP/1.1")){
+	                            		File file = new File("." + request.path);
+                            			boolean tempIsModified = false;
+										try {
+											tempIsModified = httpRequestParser.checkDate(request.headers.get("If-Unmodified-Since"), file);
+										} catch (ParseException e) {
+											e.printStackTrace();
+										}
+										System.out.println("Testing!" + tempIsModified);
+										if(tempIsModified){
+                                        	requestedRoute = Route.of("GET", "412Error"); //Not modified error. sets isModified to false
+    	                                	handler = routes.get(requestedRoute);                            														
+										}
+	                                }
                                 }
                             	
                                 handler.handle(request, response);
@@ -230,20 +263,28 @@ public class HttpServer {
                                 	out.println("");
                                 }
                                 out.println("HTTP/1.1 " + response.getStatus()); //Response includes HTTP version
-                                
                                 final Date currentTime = new Date();
                                 final SimpleDateFormat dateTemplate = new SimpleDateFormat("EEE, d MMM yyyy hh:mm:ss");
-                                dateTemplate .setTimeZone(TimeZone.getTimeZone("GMT"));
+                                dateTemplate.setTimeZone(TimeZone.getTimeZone("GMT"));
+                                
                                 if(!request.isError){ //if the response is not error response
-	                                out.println("Date: "+dateTemplate.format(currentTime) + " GMT");//Response includes date
+	                                out.println("Date: " + dateTemplate.format(currentTime) + " GMT");//Response includes date
 	                                out.println("Server: James's HTTP Server"); //Response includes host
 	                                System.out.println("HTTP/1.1 " + response.getStatus());//DELETE
                                 }
+                                if(!request.isModified){//should only get in here if the document IS NOT MODIFIED or FALSE
+	                                out.println("Date: "+dateTemplate.format(currentTime) + " GMT");//Response includes date                                	
+	                                out.println("");
+                                }
+                                if(!request.isModified){//should only get in here if the document IS NOT MODIFIED or FALSE
+	                                out.println("");
+                                }
+
                                 for (Map.Entry<String, Object> header : response.headers.entrySet()) {
                                     out.println(header.getKey() + ": " + header.getValue());
                                     System.out.println("test " + header.getKey() + ": " + header.getValue());//DELETE
                                 }
-                                if(!request.isHead){//if the request was not a HEAD method
+                                if(!request.isHead || request.isModified){//if the request was not a HEAD method and is modified
 	                                if (response.getBody() != null && response.getBody().length() > 0) {
 	                                	System.out.println("Sending strings");
 	                                	out.println("");
@@ -294,8 +335,8 @@ public class HttpServer {
                     // fine poll flag; should be timing out 
                 }
             }
-            serverSocket.close();
             threads.killAllThreads();
+            serverSocket.close();
         } catch (Exception e) {
             System.err.println("Error! Could not connect to socket:");
             e.printStackTrace();
@@ -309,8 +350,6 @@ public class HttpServer {
         while(threads.howManyThreadsAlive() > 0 ){
         	if (count < 6){
         		System.out.println("Waiting on " + threads.howManyThreadsAlive() + " thread(s) to exit. " + "Loop #" + count);
-        	} else if (count < 10){
-        		System.out.println("Please close browser to allow thread(s) to exit the connection. " + "Loop #" + count);
         	} else {
         		System.out.println("Manually shutting down thread(s).");
         		threads.emergencyShutdown();

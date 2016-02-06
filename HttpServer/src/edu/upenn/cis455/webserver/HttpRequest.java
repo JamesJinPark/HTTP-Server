@@ -9,6 +9,8 @@ public class HttpRequest {
 	public String path; //requested path (e.g.: shutdown)
 	public boolean isHead = false;
 	public boolean isError = false;
+	public boolean isModified = true;
+	public boolean isUnmodified = true;
 	
 	//constructor
 	public HttpRequest(Map<String, String> headers, String method, String path, String version){

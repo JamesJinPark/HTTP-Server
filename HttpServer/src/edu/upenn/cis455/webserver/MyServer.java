@@ -11,7 +11,7 @@ public class MyServer {
 	//application specific logic for the HTTP server
 	
 	public static void main(String[] args){
-		
+	
 		if(args.length > 3 || args.length< 2){ //must have two arguments
 			System.out.println("JamesJinPark\nSeas Login Name: jamespj");
 			System.exit(1);
@@ -122,11 +122,21 @@ public class MyServer {
 				response.headers.put("Content-Type", "text/html");				
 			}
 		});
-			    
+
+		//304 status code handler
+		myRoutes.put(Route.of("GET", "304Error"), new HttpRequestHandler(){
+			public void handle(HttpRequest request, HttpResponse response) {
+            	request.isError = true;
+            	request.isModified = false;
+	            response.setStatus("304 Not Modified");
+	        }
+		});
+
 		//400 status code handler
 		myRoutes.put(Route.of("GET", "400Error"), new HttpRequestHandler(){
 			public void handle(HttpRequest request, HttpResponse response) {
 	            String body = "400 Bad Request\n No header received: \n\n" + request;
+            	request.isError = true;
 	            response.setBody(body);
 	            response.setStatus("400 Bad Request");
 	        }
@@ -146,15 +156,27 @@ public class MyServer {
 		myRoutes.put(Route.of("GET", "405Error"), new HttpRequestHandler(){
 			public void handle(HttpRequest request, HttpResponse response) {
 	            String body = "405 Method Used Incorrectly for Request:\n\n" + request;
+            	request.isError = true;
 	            response.setBody(body);
 	            response.setStatus("405 Method Not Allowed");
 	        }
+		});
+
+		
+		//412 status code handler
+		myRoutes.put(Route.of("GET", "412Error"), new HttpRequestHandler(){
+			public void handle(HttpRequest request, HttpResponse response) {
+            	request.isError = true;
+	            response.setStatus("412 Precondition Failed");
+            	request.isUnmodified = false;
+			}
 		});
 
 		//501 status code handler
 		myRoutes.put(Route.of("GET", "501Error"), new HttpRequestHandler(){
 			public void handle(HttpRequest request, HttpResponse response) {
 	            String body = "501 Method Not Recognized for Request:\n\n" + request;
+            	request.isError = true;
 	            response.setBody(body);
 	            response.setStatus("501 Not Implemented");
 	        }
