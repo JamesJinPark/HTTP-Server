@@ -23,7 +23,7 @@ public class HttpServer {
 
     final private Path rootDir; 
 
-	final ThreadPool threads = new ThreadPool(20);//creates threadpool of 100 threads and BlockingQueue of size 100;
+	final ThreadPool threads = new ThreadPool(100);//creates threadpool of 100 threads and BlockingQueue of size 100;
 
 	/*	Special URL control
 		Returns page with 
@@ -210,14 +210,8 @@ public class HttpServer {
                                 	requestedRoute = Route.of("GET", "400Error");
 	                                handler = routes.get(requestedRoute);
                             	}
-                            	if(!request.method.equals("GET") || request.method.equals("HEAD")){
-                                	requestedRoute = Route.of("GET", "501Error");
-                                	handler = routes.get(requestedRoute);                            		
-                            	}
-
                             	if (handler == null) {
                                 	requestedRoute = Route.of("GET", "404Error");
-                                	request.isError = true;
                                 	handler = routes.get(requestedRoute);                                	
                                 } else {//handler is not null but we need to check if-modified header	
 	                            	if(request.headers.get("If-Modified-Since") != null && 
@@ -284,33 +278,33 @@ public class HttpServer {
                                     out.println(header.getKey() + ": " + header.getValue());
                                     System.out.println("test " + header.getKey() + ": " + header.getValue());//DELETE
                                 }
-                                if(!request.isHead || request.isModified){//if the request was not a HEAD method and is modified
-	                                if (response.getBody() != null && response.getBody().length() > 0) {
-	                                	System.out.println("Sending strings");
-	                                	out.println("");
-	                                    out.println(response.getBody());
-	                                    out.flush();
-	                                }
-	
-	                                if (response.getMyBytes() != null){
-	                                	System.out.println("Sending bytes");
-	                                	BufferedOutputStream output = new BufferedOutputStream(socket.getOutputStream());
-
-	                                	output.write(("HTTP/1.1 " + response.getStatus()).getBytes()); //Response includes HTTP version
-	                                	output.write("\r\n".getBytes());
-	                                	output.write(("Date: "+dateTemplate.format(currentTime) + " GMT").getBytes());//Response includes date
-	                                	output.write("\r\n".getBytes());
-	                                	output.write("Server: James's HTTP Server".getBytes()); //Response includes host
-		                                for (Map.Entry<String, Object> header : response.headers.entrySet()) {
-		                                	output.write("\r\n".getBytes());
-		                                    output.write((header.getKey() + ": " + header.getValue()).getBytes());
+                                if(!request.isHead){//if the request was not a HEAD method and is modified
+                                	if(request.isModified){ 
+                                		if (response.getBody() != null && response.getBody().length() > 0) {
+		                                	out.println("");
+		                                    out.println(response.getBody());
+		                                    out.flush();
 		                                }
-	                                	output.write("\r\n".getBytes());
-	                                	output.write("\r\n".getBytes());
-	                                	output.write(response.getMyBytes(), 0, response.getMyBytes().length);
-	                                	output.flush();
-	                                	output.close();
-	                                }
+		
+		                                if (response.getMyBytes() != null){
+		                                	BufferedOutputStream output = new BufferedOutputStream(socket.getOutputStream());
+	
+		                                	output.write(("HTTP/1.1 " + response.getStatus()).getBytes()); //Response includes HTTP version
+		                                	output.write("\r\n".getBytes());
+		                                	output.write(("Date: "+dateTemplate.format(currentTime) + " GMT").getBytes());//Response includes date
+		                                	output.write("\r\n".getBytes());
+		                                	output.write("Server: James's HTTP Server".getBytes()); //Response includes host
+			                                for (Map.Entry<String, Object> header : response.headers.entrySet()) {
+			                                	output.write("\r\n".getBytes());
+			                                    output.write((header.getKey() + ": " + header.getValue()).getBytes());
+			                                }
+		                                	output.write("\r\n".getBytes());
+		                                	output.write("\r\n".getBytes());
+		                                	output.write(response.getMyBytes(), 0, response.getMyBytes().length);
+		                                	output.flush();
+		                                	output.close();
+		                                }
+                                	}
                             	} else{
                                     out.flush();                            		
                             	}

@@ -146,6 +146,7 @@ public class MyServer {
 		myRoutes.put(Route.of("GET", "404Error"), new HttpRequestHandler(){
 			public void handle(HttpRequest request, HttpResponse response) {
 	            String body = "404 Page Not Found for Request:\n\n" + request;
+	            request.isError = true;
 	            response.setBody(body);
 	            response.setStatus("404 Not Found");
 	        }
