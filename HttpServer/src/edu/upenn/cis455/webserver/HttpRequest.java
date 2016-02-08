@@ -2,6 +2,12 @@ package edu.upenn.cis455.webserver;
 
 import java.util.Map;
 
+/**
+ * @author James Park
+ * @class cis455/555
+ * 
+ * Holds the HTTP request and organizes the information into different categories
+ */
 public class HttpRequest {
 	public Map<String, String> headers;
 	public String version; //HTTP version 

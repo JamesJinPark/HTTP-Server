@@ -1,5 +1,12 @@
 package edu.upenn.cis455.webserver;
 
+/**
+ * @author James Park
+ * @class cis455/555
+ * 
+ * Designed to hold the HTTP request method (e.g.: "GET" and "HEAD") and the HTTP requested path
+ *
+ */
 public class Route {
 	public final String method;
 	public final String path;

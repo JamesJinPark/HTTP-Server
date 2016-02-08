@@ -2,6 +2,13 @@ package edu.upenn.cis455.webserver;
 
 import java.util.*;
 
+/**
+ * @author James Park
+ * @class cis455/555
+ *
+ * @param <E>
+ * Blocking queue data structure to hold runnable tasks
+ */
 public class BlockingQueue<E>{
 	
 	private LinkedList<E> queue = new LinkedList<E>();
@@ -11,6 +18,10 @@ public class BlockingQueue<E>{
 		this.maxLength = maxLength; //size of thread pool should be around 100
 	}
 	
+	/**
+	 * @param object
+	 * Adds object to the queue
+	 */
 	public synchronized void enqueue(E object){
 		while(this.isFull() && !ShutdownHook.isShutdown.get()){
 			try {
@@ -26,6 +37,11 @@ public class BlockingQueue<E>{
 		this.queue.add(object);
 	}
 	
+	/**
+	 * @return
+	 * @throws InterruptedException
+	 * Removes item from the queue
+	 */
 	public synchronized E dequeue() throws InterruptedException{		
 		while(this.isEmpty() && !ShutdownHook.isShutdown.get()){
 			wait();

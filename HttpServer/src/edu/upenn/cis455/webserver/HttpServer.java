@@ -17,21 +17,31 @@ import java.util.Map;
 import java.util.TimeZone;
 import java.util.regex.*;
 
+/**
+ * @author James Park
+ * @class cis455/555
+ * Multi-threaded HTTP server
+ */
 public class HttpServer {
 
     final private int port;
 
     final private Path rootDir; 
 
+	/**
+	 * Creates threadpool of number of threads specified and blockingqueue of same size
+	 */
 	final ThreadPool threads = new ThreadPool(100);//creates threadpool of 100 threads and BlockingQueue of size 100;
 
-	/*	Special URL control
-		Returns page with 
+	 
+    /**
+     * Special URL control
+     * 	Returns page with 
 	    	a: student information
 			b: list of all threads in the thread pool 
 			c: status of each thread (waiting or URL it is currently handling)
 			d: a button that shuts down the server 
-	 */
+     */
     final HttpRequestHandler controlHandler = new HttpRequestHandler() {
     	public void handle(HttpRequest request, HttpResponse response) {
 			String threadsStatus = threads.getThreadsStatus(request.path);
@@ -50,7 +60,10 @@ public class HttpServer {
     
     
     
-	//Special URL shutdown
+    /**
+     * Special URL shutdown
+     * Exits all threads and connections and shutdowns server
+     */
     final HttpRequestHandler shutdownHandler = new HttpRequestHandler() {
 	    public void handle(HttpRequest request, HttpResponse response){
 			String msg = ("Shutting down server.");
@@ -210,13 +223,17 @@ public class HttpServer {
                                 	requestedRoute = Route.of("GET", "400Error");
 	                                handler = routes.get(requestedRoute);
                             	}
+                            	if(!request.method.equals("GET") || request.method.equals("HEAD")){
+                            		requestedRoute = Route.of("GET", "501Error");
+                            		handler = routes.get(requestedRoute);
+                            	}
                             	if (handler == null) {
                                 	requestedRoute = Route.of("GET", "404Error");
                                 	handler = routes.get(requestedRoute);                                	
                                 } else {//handler is not null but we need to check if-modified header	
 	                            	if(request.headers.get("If-Modified-Since") != null && 
 	                            			request.version.equals("HTTP/1.1")){
-	                            		if (request.method.equals("GET")){
+	                            		if (!request.isHead){
 	                            			File file = new File("." + request.path);
 	                            			boolean tempIsModified = false;
 											try {

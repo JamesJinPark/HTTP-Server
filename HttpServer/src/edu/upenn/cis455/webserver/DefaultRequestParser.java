@@ -5,6 +5,11 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 import java.io.*;
 
+/**
+ * @author James Park
+ * @class cis455/555
+ *
+ */
 public class DefaultRequestParser implements HttpRequestParser{
 
 	@Override
@@ -34,9 +39,14 @@ public class DefaultRequestParser implements HttpRequestParser{
 		return null;
 	}
 	
+	/**
+	 * @param month
+	 * @return String month or error
+	 * Used for converting the date from HTTP request into a usable format
+	 */
 	public String monthConverter(String month){
 		switch(month){
-		case "Jan":		return "01";
+		case "Jan":		return "01/";
 		case "Feb":		return "02/";
 		case "Mar":		return "03/";
 		case "Apr":		return "04/";
@@ -52,6 +62,10 @@ public class DefaultRequestParser implements HttpRequestParser{
 		return "Error! monthConverter failed!";
 	}
 	
+	/* (non-Javadoc)
+	 * @see edu.upenn.cis455.webserver.HttpRequestParser#checkDate(java.lang.String, java.io.File)
+	 * Returns boolean whether the date from HTTP request is before the date on the file requested
+	 */
 	@Override
 	public boolean checkDate(String date, File file) throws ParseException {
 		//must parse date to three formats

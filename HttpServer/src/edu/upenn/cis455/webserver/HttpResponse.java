@@ -3,6 +3,13 @@ package edu.upenn.cis455.webserver;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * @author James Park
+ * @class cis455/555
+ * 
+ * Builds the server response to the HTTP request
+ *
+ */
 public class HttpResponse {
 	public final Map<String, Object> headers = new HashMap<>();
 	private String body;//response body

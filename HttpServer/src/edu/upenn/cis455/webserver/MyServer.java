@@ -6,10 +6,13 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
 
+/**
+ * @author James Park
+ * @class cis455/555
+ * Application specific logic for HttpServer
+ */
 public class MyServer {
-	
-	//application specific logic for the HTTP server
-	
+		
 	public static void main(String[] args){
 	
 		if(args.length > 3 || args.length< 2){ //must have two arguments

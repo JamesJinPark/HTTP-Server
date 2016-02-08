@@ -2,6 +2,13 @@ package edu.upenn.cis455.webserver;
 
 import java.util.*;
 
+/**
+ * @author James Park
+ * @class cis455/555
+ * 
+ * From scratch implementation of a threadpool
+ *
+ */
 public class ThreadPool {
 	private BlockingQueue<Runnable> queue = null;
 	private List<Worker> threads = new ArrayList<Worker>();
