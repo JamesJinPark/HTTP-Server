@@ -13,6 +13,7 @@ import javax.servlet.*;
 public class MyServletContext implements ServletContext{
 	private HashMap<String,Object> attributes;
 	private HashMap<String,String> initParams;
+	public String contextName;
 
 	public MyServletContext(){
 		attributes = new HashMap<String,Object>();
@@ -33,8 +34,7 @@ public class MyServletContext implements ServletContext{
 
 	@Override
 	public ServletContext getContext(String arg0) {
-		// TODO Auto-generated method stub
-		return null;
+		return this;
 	}
 
 	@Override
@@ -109,7 +109,7 @@ public class MyServletContext implements ServletContext{
 
 	@Override
 	public String getServerInfo() {
-		return "James's Servlet Server";
+		return "James's Servlet Container";
 	}
 
 	@Override
@@ -120,7 +120,7 @@ public class MyServletContext implements ServletContext{
 
 	@Override
 	public String getServletContextName() {
-		return "James's Servlet Server";
+		return this.contextName;
 	}
 
 	@Override

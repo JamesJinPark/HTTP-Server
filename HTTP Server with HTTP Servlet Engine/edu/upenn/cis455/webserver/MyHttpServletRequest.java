@@ -18,13 +18,7 @@ import javax.servlet.http.HttpSession;
 
 public class MyHttpServletRequest implements HttpServletRequest {
 	
-//	public String version; 	//HTTP version 
-//	public String method; 	//request method
-//	public String path; 	//requested path (e.g.: shutdown)
-//	public boolean isHead = false;
-//	public boolean isError = false;
-//	public boolean isModified = true;
-//	public boolean isUnmodified = true;
+	private String version; 	//HTTP version 
 	private String m_body;
 	private Map<String, String> m_headers = new HashMap<String, String>();;
 	private Properties m_params = new Properties();
@@ -32,21 +26,24 @@ public class MyHttpServletRequest implements HttpServletRequest {
 	private MyHttpSession m_session = null;
 	private String m_method;
 	private int port;
-
+	private String queryString;
+	private StringBuffer requestURL;
+	private String requestURI;
 	
 	MyHttpServletRequest() { }
 	
-	MyHttpServletRequest(MyHttpSession session, int port) { m_session = session; this.port = port;}
+	MyHttpServletRequest(MyHttpSession session, int port) { 
+		m_session = session; 
+		this.port = port; 
+	}
 	
 	@Override
 	public Object getAttribute(String arg0) {
-		// TODO Auto-generated method stub
 		return m_props.get(arg0);
 	}
 
 	@Override
 	public Enumeration getAttributeNames() {
-		// TODO Auto-generated method stub
 		return m_props.keys();
 	}
 
@@ -61,7 +58,7 @@ public class MyHttpServletRequest implements HttpServletRequest {
 		if(m_headers.get("Content-Length") != null){
 			return Integer.valueOf(m_headers.get("Content-Length"));
 		}
-		return 0;
+		return -1;
 	}
 
 	@Override
@@ -83,14 +80,12 @@ public class MyHttpServletRequest implements HttpServletRequest {
 
 	@Override
 	public String getLocalName() {
-		// TODO Auto-generated method stub
-		return null;
+		return "localhost";
 	}
 
 	@Override
 	public int getLocalPort() {
-		// TODO Auto-generated method stub
-		return 0;
+		return port;
 	}
 
 	@Override
@@ -131,8 +126,11 @@ public class MyHttpServletRequest implements HttpServletRequest {
 
 	@Override
 	public String getProtocol() {
-		// TODO Auto-generated method stub
-		return null;
+		return this.version;
+	}
+
+	public void setProtocol(String version) {
+		this.version = version;
 	}
 
 	@Override
@@ -224,8 +222,19 @@ public class MyHttpServletRequest implements HttpServletRequest {
 
 	@Override
 	public Cookie[] getCookies() {
-		// TODO Auto-generated method stub
-		return null;
+		String cookiesString = m_headers.get("Cookie");
+		if(cookiesString == null){
+			return null;
+		}
+		//parse cookies
+		//e.g.: NAME1=OPAQUE_STRING1; NAME2=OPAQUE_STRING2
+		String[] cookiesStrings = cookiesString.split("\\;"); 
+		Cookie[] cookies = new Cookie[cookiesStrings.length];
+		for (int i = 0 ; i< cookiesStrings.length; i++){
+			String temp[] = cookiesStrings[i].trim().split("\\?|&|="); 
+			cookies[i] = new Cookie(temp[0], temp[1]);
+		}
+		return cookies;
 	}
 
 	@Override
@@ -236,7 +245,6 @@ public class MyHttpServletRequest implements HttpServletRequest {
 
 	@Override
 	public String getHeader(String arg0) {
-		// TODO Auto-generated method stub
 		return m_headers.get(arg0);
 	}
 
@@ -254,8 +262,11 @@ public class MyHttpServletRequest implements HttpServletRequest {
 
 	@Override
 	public int getIntHeader(String arg0) {
-		// TODO Auto-generated method stub
-		return 0;
+		if(this.m_headers.get(arg0) == null){
+			return -1;
+		} else{
+			return Integer.valueOf(this.m_headers.get(arg0));
+		}
 	}
 
 	@Override
@@ -277,8 +288,11 @@ public class MyHttpServletRequest implements HttpServletRequest {
 
 	@Override
 	public String getQueryString() {
-		// TODO Auto-generated method stub
-		return null;
+		return this.queryString;
+	}
+
+	public void setQueryString(String queryString) {
+		this.queryString = queryString;
 	}
 
 	@Override
@@ -289,14 +303,20 @@ public class MyHttpServletRequest implements HttpServletRequest {
 
 	@Override
 	public String getRequestURI() {
-		// TODO Auto-generated method stub
-		return null;
+		return this.requestURI;
+	}
+
+	public void setRequestURI(String requestURI) {
+		this.requestURI = requestURI;
 	}
 
 	@Override
 	public StringBuffer getRequestURL() {
-		// TODO Auto-generated method stub
-		return null;
+		return this.requestURL;
+	}
+
+	public void setRequestURL(StringBuffer requestURL) {
+		this.requestURL = requestURL;
 	}
 
 	@Override
@@ -315,18 +335,19 @@ public class MyHttpServletRequest implements HttpServletRequest {
 	public HttpSession getSession(boolean bool) {
 		if (bool) { //what is bool here? 
 			if (!hasSession()) {
-				m_session = new MyHttpSession();
+				this.m_session = new MyHttpSession();
+			} else {
 			}
 		} else {
 			if (!hasSession()) {
-				m_session = null;
+				this.m_session = null;
 			}
 		}
-		return m_session;
+		return this.m_session;
 	}
 	
 	public HttpSession getSession() {
-		return getSession(true); //why???
+		return getSession(true); 
 	}
 	
 	boolean hasSession() {

@@ -15,6 +15,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import javax.servlet.ServletException;
+import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServlet;
 import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
@@ -36,6 +37,7 @@ public class MyServerServlets {
 		HashMap<String,String> m_servlets = new HashMap<String,String>();
 		HashMap<String,String> m_contextParams = new HashMap<String,String>();
 		HashMap<String,HashMap<String,String>> m_servletParams = new HashMap<String,HashMap<String,String>>();
+		public String displayName;
 		
 		public void startElement(String uri, String localName, String qName, Attributes attributes) {
 			if (qName.compareTo("servlet-name") == 0) {
@@ -45,7 +47,9 @@ public class MyServerServlets {
 			} else if (qName.compareTo("context-param") == 0) {
 				m_state = 3;
 			} else if (qName.compareTo("init-param") == 0) {
-				m_state = 4;
+				m_state = 4;				
+			} else if (qName.compareTo("display-name") == 0) {
+				m_state = 5;
 			} else if (qName.compareTo("param-name") == 0) {
 				m_state = (m_state == 3) ? 10 : 20;
 			} else if (qName.compareTo("param-value") == 0) {
@@ -60,6 +64,9 @@ public class MyServerServlets {
 				m_state = 0;
 			} else if (m_state == 2) {
 				m_servlets.put(m_servletName, value);
+				m_state = 0;
+			} else if (m_state == 5) {
+				this.displayName = value;
 				m_state = 0;
 			} else if (m_state == 10 || m_state == 20) {
 				m_paramName = value;
@@ -97,16 +104,16 @@ public class MyServerServlets {
 		}
 		SAXParser parser = SAXParserFactory.newInstance().newSAXParser();
 		parser.parse(file, h);
-		
 		return h;
 	}
 	
 	private static MyServletContext createContext(Handler h) {
-		MyServletContext servletContent = new MyServletContext();
+		MyServletContext servletContext = new MyServletContext();
 		for (String param : h.m_contextParams.keySet()) {
-			servletContent.setInitParam(param, h.m_contextParams.get(param));
+			servletContext.setInitParam(param, h.m_contextParams.get(param));
 		}
-		return servletContent;
+		servletContext.contextName = h.displayName;
+		return servletContext;
 	}
 	
 	private static HashMap<String,HttpServlet> createServlets(Handler h, MyServletContext fc) throws Exception {
@@ -128,10 +135,11 @@ public class MyServerServlets {
 			servlets.put(servletName + '/', servlet);
 			servlets.put('/' + servletName + '/', servlet);
 		}
+		
 		return servlets;
 	}
 	
-	public static void main(final String[] args) throws Exception{
+	public void run(final String[] args) throws Exception{
 		if(args.length != 3){ //check number of args
 			System.out.println("JamesJinPark\nSeas Login Name: jamespj");
 			System.exit(1);			
@@ -174,91 +182,104 @@ public class MyServerServlets {
 				
 					    		//initialize request and response
 					    		MyHttpServletRequest request = new MyHttpServletRequest(httpSession, port);
-					    		MyHttpServletResponse response = new MyHttpServletResponse(socket);
+					    		MyHttpServletResponse response = new MyHttpServletResponse(socket, request);
 				
 					    		//parse request
 								String line = in.readLine();			
 								String[] parts = line.split("\\s+");
 								String method = parts[0]; // e.g.: GET
 								String path = parts[1]; // e.g.: demo
-								String httpVersion = parts[2]; //e.g.: HTTP/1.1
-					    		String[] strings = path.split("\\?|&|="); //splits path
+								String httpVersion = parts[2]; //e.g.: HTTP/1.1								
+
+								
+								request.setProtocol(httpVersion);
+								
+								response.version = httpVersion;								
+
+								String[] strings = path.split("\\?|&|="); //splits path
+					    		
+					    		//capture query string
+				    			Pattern queryPattern = Pattern.compile("(/?)(.+?)(\\?)(.*)");
+				    			Matcher q = queryPattern.matcher(path);
+				    			if(q.matches()){
+				    				request.setQueryString(q.group(4));
+									request.setRequestURL(new 
+											StringBuffer(httpVersion).append(request.getServerName()).
+											append(port).append(strings[0]));
+									request.setRequestURI(strings[0]);									
+				    			}
+				    			
+				    			
+				    			//capture servlet if request URL has multiple '/'
 				    			Pattern pattern = Pattern.compile("(/?)(.+?)(/)(.*)");
 				    			Matcher m = pattern.matcher(strings[0]);
 
 				    			if(m.matches()){
 					    			strings[0] = m.group(2);
 					    		} 
+
 					    		HttpServlet servlet = servlets.get(strings[0]); //tries to find servlet
-					    		
+					    							    		
 					    		//check whether servlet is requested or servlet exists in web.xml	
 					    		if (servlet == null) {
 					    			//if servlet is not requested or servlet does not exist, go to MS1 HTTPserver
-					    			//System.out.println("Entering Milestone1");
+					    			System.out.println("Entering Milestone1");
 					    			MyServer milestone1 = new MyServer();
 					    			milestone1.run(args, socket, in, line, threads);
 					    		} else{
 					    			//saves parameters
 						    		for (int j = 1; j < strings.length - 1; j += 2) {
-						    			System.out.println(strings[j].toString() + strings[j+1].toString());
 						    			request.setParameter(strings[j], strings[j+1]);
 						    		}
-						    		if (method.compareTo("GET") == 0 || method.compareTo("POST") == 0) {
+						    		if (method.compareTo("GET") == 0 || method.compareTo("POST") == 0 || 
+						    				method.compareTo("HEAD") == 0) { // add HEAD?
 						    			request.setMethod(method);
-						    			if(method.compareTo("POST") == 0){
-								    		//saves all headers
-						    				while(true) {
-						    					line = in.readLine();
-												if (line == null || line.isEmpty()) break;
-												//e.g: Host: localhost:90
-												String key = null;
-												String value = null;
-												try{
-													int separator = line.indexOf(':');
-													key = line.substring(0, separator).trim(); //Host
-													value = line.substring(separator + 1).trim(); //localhost:90
-												}catch(Exception e){
-													System.err.println("Could not parse header: " + line + " " + e);
-												}	
-												request.setHeaders(key, value);
-											}
-						    				
-							    			if(request.getContentType().equals("application/x-www-form-urlencoded")){
+						    			
+							    		//saves all headers
+						    			System.out.println("THIS IS REQUEST");
+					    				while(true) {
+					    					line = in.readLine();
+											if (line == null || line.isEmpty()) break;
+											//e.g: Host: localhost:90
+											String key = null;
+											String value = null;
+											try{
+												int separator = line.indexOf(':');
+												key = line.substring(0, separator).trim(); //Host
+												value = line.substring(separator + 1).trim(); //localhost:90
+												System.out.println(line);
+											}catch(Exception e){
+												System.err.println("Could not parse header: " + line + " " + e);
+											}	
+											request.setHeaders(key, value);
+										}
+
+						    			
+						    			if(method.compareTo("POST") == 0){				
+						    				if(request.getContentType().equals("application/x-www-form-urlencoded")){
 							    				//saves body
 												//e.g: name1=value1&name2=value2
 							    				int length = request.getContentLength();
-							    				System.out.println(1);
 								    			if(length > 0 ){
-								    				System.out.println(1.5);
-								    				char[] buf = new char[1024];
-								    				System.out.println(1.6);
-//								    				int count = in.read(buf, 0, length);
-								    				String body = in.readLine();//ask TA about this.  From browser this freezes
-								    				
-								    				
-								    				
-								    				System.out.println(1.75);
-//								    				request.setBody(buf.toString());
-								    				request.setBody(body);
-								    			}else {
-								    				System.out.println(2);
-								    				socket.setSoTimeout(2000);								    				
+								    				char[] buf = new char[1024];	
+								    				int count = in.read(buf, 0, length);
+								    				request.setBody(String.valueOf(buf));
 								    			}
 											} else{
 												//something else
 											}
-						    				System.out.println(3);
-
-						    				String[] messageParts = request.getBody().split("\\?|&|="); 
-								    		for (int j = 0; j < messageParts.length - 1; j += 2) {
-								    			System.out.println(messageParts[j].toString() + " " + messageParts[j+1].toString());
-								    			request.setParameter(messageParts[j], messageParts[j+1]);
-								    		}
-						    				System.out.println(4);
-
+							    			if(request.getBody() != null){
+							    				String[] messageParts = request.getBody().split("\\?|&|="); 
+									    		for (int j = 0; j < messageParts.length - 1; j += 2) {
+									    			request.setParameter(messageParts[j].trim(), messageParts[j+1].trim());
+									    		}
+							    			}
 						    			}
 						    			servlet.service(request, response);
-						    			response.getWriter().flush();
+						    			
+							    		if(response.flushed == false){//if the servlet has not flushed the buffer
+						    				response.getWriter().flush();						    				
+						    			}
 						    		} else {
 						    			System.err.println("error: expecting 'GET' or 'POST', not '" + method + "'");
 						    			System.exit(-1);

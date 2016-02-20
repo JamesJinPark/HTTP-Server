@@ -23,20 +23,17 @@ public class CalculatorServlet extends HttpServlet{
 			}
 			out.flush();
 			bf.close();
-		//}
+	//	}
 	}
 	
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException{
-		System.out.println("TEST " + request.getParameter("num1"));
-		System.out.println("TEST " + request.getParameter("num2"));
-
-		int v1 = Integer.valueOf(request.getParameter("num1")).intValue();
-		int v2 = Integer.valueOf(request.getParameter("num2")).intValue();
+		int v1 = Integer.parseInt(request.getParameter("num1"));
+		int v2 = Integer.parseInt(request.getParameter("num2"));
 		PrintWriter out = response.getWriter();
+		response.setContentType("text/html");
 		out.println("<html><head><title>Foo</title></head>");
 		out.println("<body>" + v1 + "+" + v2 + "=" + (v1 + v2) + "</body></html>");
-		System.out.println(v1 + "+" + v2 + "=" + (v1 + v2));
-//		response.flushBuffer();
-		out.flush();
+		response.flushBuffer();
+//		out.flush();
 	}
 }

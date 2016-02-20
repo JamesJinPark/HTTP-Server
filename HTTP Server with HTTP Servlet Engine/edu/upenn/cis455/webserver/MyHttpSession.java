@@ -2,7 +2,7 @@ package edu.upenn.cis455.webserver;
 
 import java.util.Enumeration;
 import java.util.Properties;
-
+import java.util.Random;
 import javax.servlet.ServletContext;
 import javax.servlet.http.*;
 
@@ -10,16 +10,24 @@ public class MyHttpSession implements HttpSession{
 
 	private boolean m_valid = true;
 	private Properties m_properties = new Properties();
+	private int max_inactive_interval = 0;
+	private String id;
+	public boolean attributesExist;
 
+	MyHttpSession() {
+		Random rand = new Random();
+		this.id = String.valueOf(rand.nextInt(1000000 - 1));
+		this.attributesExist = false;
+	}
+	
 	@Override
 	public Object getAttribute(String arg0) {
-		// TODO Auto-generated method stub
 		return m_properties.get(arg0);
 	}
 
+	@SuppressWarnings("rawtypes")
 	@Override
 	public Enumeration getAttributeNames() {
-		// TODO Auto-generated method stub
 		return m_properties.keys();
 	}
 
@@ -31,8 +39,7 @@ public class MyHttpSession implements HttpSession{
 
 	@Override
 	public String getId() {
-		// TODO Auto-generated method stub
-		return null;
+		return this.id;
 	}
 
 	@Override
@@ -43,8 +50,7 @@ public class MyHttpSession implements HttpSession{
 
 	@Override
 	public int getMaxInactiveInterval() {
-		// TODO Auto-generated method stub
-		return 0;
+		return this.max_inactive_interval;
 	}
 
 	@Override
@@ -53,15 +59,14 @@ public class MyHttpSession implements HttpSession{
 		return null;
 	}
 
+	@SuppressWarnings("deprecation")
 	@Override
 	public HttpSessionContext getSessionContext() {
-		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
 	public Object getValue(String arg0) {
-		// TODO Auto-generated method stub
 		return m_properties.get(arg0);
 	}
 
@@ -73,7 +78,6 @@ public class MyHttpSession implements HttpSession{
 
 	@Override
 	public void invalidate() {
-		// TODO Auto-generated method stub
 		m_valid = false;		
 	}
 
@@ -85,32 +89,28 @@ public class MyHttpSession implements HttpSession{
 
 	@Override
 	public void putValue(String arg0, Object arg1) {
-		// TODO Auto-generated method stub
 		m_properties.put(arg0, arg1);
 	}
 
 	@Override
 	public void removeAttribute(String arg0) {
-		// TODO Auto-generated method stub
 		m_properties.remove(arg0);		
 	}
 
 	@Override
 	public void removeValue(String arg0) {
-		// TODO Auto-generated method stub
 		m_properties.remove(arg0);
 	}
 	
 	@Override
 	public void setAttribute(String arg0, Object arg1) {
-		// TODO Auto-generated method stub
+		this.attributesExist = true;
 		m_properties.put(arg0, arg1);		
 	}
 
 	@Override
 	public void setMaxInactiveInterval(int arg0) {
-		// TODO Auto-generated method stub
-		
+		this.max_inactive_interval = arg0;
 	}
 
 	boolean isValid() {

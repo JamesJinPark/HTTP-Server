@@ -387,4 +387,15 @@ public class HttpServer {
 //        }
 //        System.out.println("Server shut down.");
     }
+    
+
+	public static void main(final String[] args) {
+		MyServerServlets server = new MyServerServlets();
+		try {
+			server.run(args);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}	
+	
 }

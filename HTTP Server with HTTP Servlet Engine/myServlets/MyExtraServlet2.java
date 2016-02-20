@@ -25,7 +25,26 @@ public class MyExtraServlet2 extends HttpServlet{
 //		p.close();
 		
 		//ExtraServlet1
-		response.sendError(404);
+//		response.sendError(404);
+		
+		//ExtraServlet0		
+		response.addHeader("H1", "value1");
+		PrintWriter p = response.getWriter();
+		response.resetBuffer();
+		p.println("hey");
+		boolean flag = false;
+		try{
+			response.reset();
+		}
+		catch(IllegalStateException e){
+			p.println("PASSED: Buffer test");
+			flag = true;
+		}
+	
+		if(flag == false){
+			p.println("FAILED: Buffer test - can't reset buffer after you write in body");
+		}
+		p.flush();
+		p.close();
 	}
-
 }
