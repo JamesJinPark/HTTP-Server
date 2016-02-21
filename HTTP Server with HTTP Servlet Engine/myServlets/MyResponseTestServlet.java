@@ -31,17 +31,16 @@ public class MyResponseTestServlet extends HttpServlet {
 
 		out.println(theForm.toString());
 		out.flush();
-		//out.close();
+//		out.close();
 	}
 
 
 
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-		response.setContentType("text/plain");
-		PrintWriter out = response.getWriter();
-		try{
+		response.setContentType("text/html");
 
-			
+		PrintWriter out = response.getWriter();
+		try{	
 			response.setContentLength(524);
 
 			// test setContentType
@@ -67,8 +66,6 @@ public class MyResponseTestServlet extends HttpServlet {
 				out.println("FAILED: getContentLength() - ContentLength = "+request.getContentLength()+"");
 			out.flush();
 			// getWriter is tested via using it... if nothing works, getWriter is broken
-
-
 		} catch (NullPointerException e){
 			out.println("Response: Null Pointer Exception in Servlet");
 			out.flush();

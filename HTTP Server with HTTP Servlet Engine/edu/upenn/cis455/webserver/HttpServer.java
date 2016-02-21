@@ -3,8 +3,9 @@ package edu.upenn.cis455.webserver;
 import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.io.PrintWriter;
 //import java.net.ServerSocket;
 import java.net.Socket;
@@ -26,7 +27,7 @@ public class HttpServer {
 
     final private int port;
 
-    final private Path rootDir; 
+    final public Path rootDir; 
 
 	/**
 	 * Creates threadpool of number of threads specified and blockingqueue of same size
@@ -76,12 +77,53 @@ public class HttpServer {
     					"<p>SEAS login:  jamespj</p>" +
     					"<h1>Server Information</h1>" +
     					"<p>" + threadsStatus + "</p>" +					
-    					"<button onclick=\"location.href='/shutdown'\">Shutdown Server</button>" +					
+    					"<button onclick=\"location.href='/errorLog'\">View Error Log</button></br>" +					
+    					"<p> </p>" +					
+    					"<button onclick=\"location.href='/shutdown'\">Shutdown Server</button>" +
     					"</body></html>" );
     			response.headers.put("Content-Type", "text/html");
     			response.setBody(msg);			            
             }
         };    
+        
+        final HttpRequestHandler logHandler = new HttpRequestHandler() {
+        	public void handle(HttpRequest request, HttpResponse response) {
+        		File file = new File(rootDir + "/ErrorLog.txt");
+        		try {
+        			BufferedReader reader = new BufferedReader(new FileReader(file));
+        			StringBuilder builder = new StringBuilder();
+        			String line = reader.readLine();
+        			
+        			while(line != null){
+        				builder.append(line);
+        				builder.append(System.lineSeparator());
+        				line = reader.readLine();
+        			}
+	        		String errorString = builder.toString();
+	
+	    			String msg = ("<!DOCTYPE html><html><body>" +
+	    					"<h1>Student Information</h1><p>Name:  James Jin Park</p>" +
+	    					"<p>SEAS login:  jamespj</p>" +
+	    					"<h1>Error Log</h1>" +
+	    					"<p>" + errorString + "</p>" +					
+	    					"<button onclick=\"location.href='/control'\">Back to Control</button>" +					
+	    					"</body></html>" );
+	    			response.headers.put("Content-Type", "text/html");
+	    			response.setBody(msg);	
+	    			reader.close();
+        		} catch (Exception e) {
+						e.printStackTrace();
+						String msg = ("<!DOCTYPE html><html><body>" +
+		    					"<h1>Student Information</h1><p>Name:  James Jin Park</p>" +
+		    					"<p>SEAS login:  jamespj</p>" +
+		    					"<h1>Missing Error Log</h1>" +
+		    					"<button onclick=\"location.href='/control'\">Back to Control</button>" +					
+								"</body></html>");
+	        			response.setBody(msg);			            		
+				} 
+            }
+        };    
+
 
     	
 //        try (ServerSocket serverSocket = new ServerSocket(this.port, 200)) {
@@ -132,6 +174,11 @@ public class HttpServer {
                 			        handler = routes.get(requestedRoute);   
                             	} 
 
+                            	if (request.method.toUpperCase().equals("POST")){
+                			        requestedRoute = Route.of(request.method, "405Error");
+                			        handler = routes.get(requestedRoute);   
+                            	} 
+                            	
                             	String absolutePath = null;
                                 if(request.headers.get("Host") != null){
                                 	absolutePath = request.path;
@@ -143,8 +190,12 @@ public class HttpServer {
                             	} else {
                                 	absolutePath = "http://localhost:" + port + "/" + request.path;
                                 }
-                                
-                                File absoluteFile = new File(rootDir + absolutePath);
+                                File absoluteFile = null;
+                                if(request.path.equals("/")){
+                                    absoluteFile = new File(rootDir + "/" + request.path);                                	
+                                }else{
+                                    absoluteFile = new File("." + request.path);
+                                }
 
                                 //complicated path
                                 String HTMLregex =  "([^\\s]+(\\.(?i)(html))$)";
@@ -226,7 +277,16 @@ public class HttpServer {
                             		){
                                 	handler = shutdownHandler;
                                 }                            	
-                        		
+
+                            	//log handler
+                            	if ((requestedRoute.method.equals(Route.of("GET", "/errorLog").method)&& 
+                            			requestedRoute.path.equals(Route.of("GET", "/errorLog").path)) || 
+                            			((requestedRoute.method.equals(Route.of("GET", absoluteSpecialPath + "/errorLog").method)&& 
+                                    			requestedRoute.path.equals(Route.of("GET", absoluteSpecialPath + "/errorLog").path)))
+                            		){
+                                	handler = logHandler;
+                                }                            	
+
                             	if((request.method.equals("Missing")) 
                             			|| (request.path.equals("Missing")) 
                             			||(request.version.equals("Missing")) 

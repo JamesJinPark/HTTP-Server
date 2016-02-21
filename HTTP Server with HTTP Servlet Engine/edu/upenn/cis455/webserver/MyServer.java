@@ -118,7 +118,7 @@ public class MyServer {
 		myRoutes.put(Route.of("GET", "/"), new HttpRequestHandler(){
 			@Override
 			public void handle(HttpRequest request, HttpResponse response){
-				File file = new File(".");
+				File file = new File("." + rootDir);
 				String temp = "<h1>" + file.getAbsolutePath() + "</h1>";
 				for (File folder : file.listFiles()){
 					String fileName = folder.toString().substring(2);
@@ -149,7 +149,17 @@ public class MyServer {
 	            response.setStatus("400 Bad Request");
 	        }
 		});
-		
+
+		//403 status code handler
+		myRoutes.put(Route.of("GET", "403Error"), new HttpRequestHandler(){
+			public void handle(HttpRequest request, HttpResponse response) {
+	            String body = "403 Forbidden\n\n" + request;
+            	request.isError = true;
+	            response.setBody(body);
+	            response.setStatus("403 Forbidden");
+	        }
+		});
+
 		//404 status code handler
 		myRoutes.put(Route.of("GET", "404Error"), new HttpRequestHandler(){
 			public void handle(HttpRequest request, HttpResponse response) {

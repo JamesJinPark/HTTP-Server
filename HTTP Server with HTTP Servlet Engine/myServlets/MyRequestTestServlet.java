@@ -49,7 +49,8 @@ public class MyRequestTestServlet extends HttpServlet {
 			boolean queryStringflag=false;
 			
 			
-			if(request.getQueryString()!=null && ( request.getQueryString().equals("?Sam=Gamgee") || request.getQueryString().equals("Sam=Gamgee") )){
+			if(request.getQueryString()!=null && 
+					( request.getQueryString().equals("?Sam=Gamgee") || request.getQueryString().equals("Sam=Gamgee") )){
 				out.println("PASSED: getQueryString() - QueryString = "+request.getQueryString()+"");
 				queryStringflag=true;
 			}

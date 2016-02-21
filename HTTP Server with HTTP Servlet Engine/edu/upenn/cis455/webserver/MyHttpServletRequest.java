@@ -2,6 +2,7 @@ package edu.upenn.cis455.webserver;
 
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.StringReader;
 import java.io.UnsupportedEncodingException;
 import java.security.Principal;
 import java.util.Enumeration;
@@ -16,6 +17,12 @@ import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 
+/**
+ * @author James Park
+ * @class cis455/555
+ * An implementation of the HttpServletRequest interface
+ *
+ */
 public class MyHttpServletRequest implements HttpServletRequest {
 	
 	private String version; 	//HTTP version 
@@ -23,18 +30,20 @@ public class MyHttpServletRequest implements HttpServletRequest {
 	private Map<String, String> m_headers = new HashMap<String, String>();;
 	private Properties m_params = new Properties();
 	private Properties m_props = new Properties();
-	private MyHttpSession m_session = null;
+	private MyHttpSession m_session;
 	private String m_method;
-	private int port;
+	public int port;
 	private String queryString;
 	private StringBuffer requestURL;
 	private String requestURI;
+	public MyServletContext context;
 	
 	MyHttpServletRequest() { }
 	
-	MyHttpServletRequest(MyHttpSession session, int port) { 
-		m_session = session; 
+	MyHttpServletRequest(MyHttpSession session, int port, MyServletContext context) {
+		this.m_session = session;
 		this.port = port; 
+		this.context = context;
 	}
 	
 	@Override
@@ -42,6 +51,7 @@ public class MyHttpServletRequest implements HttpServletRequest {
 		return m_props.get(arg0);
 	}
 
+	@SuppressWarnings("rawtypes")
 	@Override
 	public Enumeration getAttributeNames() {
 		return m_props.keys();
@@ -49,8 +59,7 @@ public class MyHttpServletRequest implements HttpServletRequest {
 
 	@Override
 	public String getCharacterEncoding() {
-		// TODO Auto-generated method stub
-		return null;
+		return "ISO-8859-1";
 	}
 
 	@Override
@@ -68,14 +77,12 @@ public class MyHttpServletRequest implements HttpServletRequest {
 
 	@Override
 	public ServletInputStream getInputStream() throws IOException {
-		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
 	public String getLocalAddr() {
-		// TODO Auto-generated method stub
-		return null;
+		return "127.0.0.1";
 	}
 
 	@Override
@@ -90,13 +97,12 @@ public class MyHttpServletRequest implements HttpServletRequest {
 
 	@Override
 	public Locale getLocale() {
-		// TODO Auto-generated method stub
 		return null;
 	}
 
+	@SuppressWarnings("rawtypes")
 	@Override
 	public Enumeration getLocales() {
-		// TODO Auto-generated method stub
 		return null;
 	}
 
@@ -108,8 +114,7 @@ public class MyHttpServletRequest implements HttpServletRequest {
 	@SuppressWarnings("rawtypes")
 	@Override
 	public Map getParameterMap() {
-		// TODO Auto-generated method stub
-		return null;
+		return m_params;
 	}
 
 	@SuppressWarnings("rawtypes")
@@ -120,8 +125,14 @@ public class MyHttpServletRequest implements HttpServletRequest {
 
 	@Override
 	public String[] getParameterValues(String arg0) {
-		// TODO Auto-generated method stub
-		return null;
+		Object[] objects = m_params.values().toArray();
+		String[] strings = new String[objects.length];
+		int i = 0;
+		for (Object object: objects){
+			strings[i] = object.toString();
+			i++;
+		}
+		return strings;
 	}
 
 	@Override
@@ -135,44 +146,38 @@ public class MyHttpServletRequest implements HttpServletRequest {
 
 	@Override
 	public BufferedReader getReader() throws IOException {
-		// TODO Auto-generated method stub
-		return null;
+		BufferedReader reader = new BufferedReader(new StringReader(this.m_body));
+		return reader;
 	}
 
 	@Override
 	public String getRealPath(String arg0) {
-		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
 	public String getRemoteAddr() {
-		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
 	public String getRemoteHost() {
-		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
 	public int getRemotePort() {
-		// TODO Auto-generated method stub
 		return 0;
 	}
 
 	@Override
 	public RequestDispatcher getRequestDispatcher(String arg0) {
-		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
 	public String getScheme() {
-		// TODO Auto-generated method stub
-		return null;
+		return "http";
 	}
 
 	@Override
@@ -187,7 +192,6 @@ public class MyHttpServletRequest implements HttpServletRequest {
 
 	@Override
 	public boolean isSecure() {
-		// TODO Auto-generated method stub
 		return false;
 	}
 
@@ -203,20 +207,16 @@ public class MyHttpServletRequest implements HttpServletRequest {
 
 	@Override
 	public void setCharacterEncoding(String arg0)
-			throws UnsupportedEncodingException {
-		// TODO Auto-generated method stub
-		
+			throws UnsupportedEncodingException {		
 	}
 
 	@Override
 	public String getAuthType() {
-		// TODO Auto-generated method stub
-		return null;
+		return "BASIC_AUTH('BASIC')";
 	}
 
 	@Override
 	public String getContextPath() {
-		// TODO Auto-generated method stub
 		return null;
 	}
 
@@ -239,8 +239,7 @@ public class MyHttpServletRequest implements HttpServletRequest {
 
 	@Override
 	public long getDateHeader(String arg0) {
-		// TODO Auto-generated method stub
-		return 0;
+		return (long) Integer.valueOf(m_headers.get(arg0));
 	}
 
 	@Override
@@ -276,13 +275,11 @@ public class MyHttpServletRequest implements HttpServletRequest {
 
 	@Override
 	public String getPathInfo() {
-		// TODO Auto-generated method stub
-		return null;
+		return '/' + this.requestURI;
 	}
 
 	@Override
 	public String getPathTranslated() {
-		// TODO Auto-generated method stub
 		return null;
 	}
 
@@ -297,7 +294,6 @@ public class MyHttpServletRequest implements HttpServletRequest {
 
 	@Override
 	public String getRemoteUser() {
-		// TODO Auto-generated method stub
 		return null;
 	}
 
@@ -321,23 +317,43 @@ public class MyHttpServletRequest implements HttpServletRequest {
 
 	@Override
 	public String getRequestedSessionId() {
-		// TODO Auto-generated method stub
+		Cookie[] cookies = getCookies();
+		if(cookies != null){
+			for (Cookie cookie: cookies){
+				if (cookie.getName().equals("JSESSIONID")){
+					return cookie.getValue();
+				}
+			}
+		}
 		return null;
 	}
 
 	@Override
 	public String getServletPath() {
-		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
 	public HttpSession getSession(boolean bool) {
-		if (bool) { //what is bool here? 
-			if (!hasSession()) {
-				this.m_session = new MyHttpSession();
-			} else {
+		
+		//find session
+		Cookie[] cookies = getCookies();
+		if(cookies != null){
+			for(int i = 0; i < cookies.length; i++){
+				if(cookies[i].getName().equals("JSESSIONID")){
+					String id = cookies[i].getValue();
+					MyHttpSession previous_session = context.sessions.get(id);
+					if (previous_session != null){
+						this.m_session = previous_session;
+					}
+				}
 			}
+		}		
+		
+		if (bool) { 
+			if (!hasSession()) {
+				this.m_session = new MyHttpSession(this.context);
+			} 
 		} else {
 			if (!hasSession()) {
 				this.m_session = null;
@@ -351,42 +367,49 @@ public class MyHttpServletRequest implements HttpServletRequest {
 	}
 	
 	boolean hasSession() {
+		if(m_session != null){
+		}
 		return ((m_session != null) && m_session.isValid());
 	}
 
 	@Override
 	public Principal getUserPrincipal() {
-		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
 	public boolean isRequestedSessionIdFromCookie() {
-		// TODO Auto-generated method stub
 		return false;
 	}
 
 	@Override
 	public boolean isRequestedSessionIdFromURL() {
-		// TODO Auto-generated method stub
 		return false;
 	}
 
 	@Override
 	public boolean isRequestedSessionIdFromUrl() {
-		// TODO Auto-generated method stub
 		return false;
 	}
 
 	@Override
 	public boolean isRequestedSessionIdValid() {
-		// TODO Auto-generated method stub
+		Cookie[] cookies = getCookies();
+		if(cookies != null){
+			for (Cookie cookie: cookies){
+				if (cookie.getName().equals("JSESSIONID")){
+					MyHttpSession session = context.sessions.get(cookie.getValue());
+					if(session != null){
+						return session.isValid();
+					}
+				}
+			}
+		}
 		return false;
 	}
 
 	@Override
 	public boolean isUserInRole(String arg0) {
-		// TODO Auto-generated method stub
 		return false;
 	}
 	

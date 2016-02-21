@@ -2,24 +2,27 @@ package edu.upenn.cis455.webserver;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.PrintWriter;
+import java.io.PrintStream;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.net.SocketTimeoutException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashMap;
+import java.util.logging.FileHandler;
+import java.util.logging.LogManager;
+import java.util.logging.SimpleFormatter;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import javax.servlet.ServletException;
-import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServlet;
 import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
 
+import org.apache.log4j.Logger;
 import org.xml.sax.Attributes;
 import org.xml.sax.helpers.DefaultHandler;
 
@@ -29,6 +32,11 @@ import org.xml.sax.helpers.DefaultHandler;
  * Application specific logic for Servlet Engine (Servlet Container)
  */
 public class MyServerServlets {	
+	
+	/**
+	 * @author cis455
+	 * Starter code /handler class for Milestone2 that parses web.xml document
+	 */
 	static class Handler extends DefaultHandler {
 	
 		private int m_state = 0;
@@ -39,6 +47,9 @@ public class MyServerServlets {
 		HashMap<String,HashMap<String,String>> m_servletParams = new HashMap<String,HashMap<String,String>>();
 		public String displayName;
 		
+		/* (non-Javadoc)
+		 * @see org.xml.sax.helpers.DefaultHandler#startElement(java.lang.String, java.lang.String, java.lang.String, org.xml.sax.Attributes)
+		 */
 		public void startElement(String uri, String localName, String qName, Attributes attributes) {
 			if (qName.compareTo("servlet-name") == 0) {
 				m_state = 1;
@@ -57,6 +68,9 @@ public class MyServerServlets {
 			}
 		}
 		
+		/* (non-Javadoc)
+		 * @see org.xml.sax.helpers.DefaultHandler#characters(char[], int, int)
+		 */
 		public void characters(char[] ch, int start, int length) {
 			String value = new String(ch, start, length);
 			if (m_state == 1) {
@@ -95,6 +109,11 @@ public class MyServerServlets {
 		}
 	}
 		
+	/**
+	 * @param webdotxml
+	 * @return Handler handler
+	 * @throws Exception
+	 */
 	private static Handler parseWebdotxml(String webdotxml) throws Exception {
 		Handler h = new Handler();
 		File file = new File(webdotxml);
@@ -107,6 +126,11 @@ public class MyServerServlets {
 		return h;
 	}
 	
+	/**
+	 * @param Handler h
+	 * @return MyServletContext
+	 * Creates an implementation of the servlet context class for a web application
+	 */
 	private static MyServletContext createContext(Handler h) {
 		MyServletContext servletContext = new MyServletContext();
 		for (String param : h.m_contextParams.keySet()) {
@@ -116,11 +140,20 @@ public class MyServerServlets {
 		return servletContext;
 	}
 	
+	/**
+	 * @param Handler h
+	 * @param MyServletContext fc
+	 * @return HashMap<string, HttpServlet>
+	 * @throws Exception
+	 * 
+	 * creates a map of all servlets found on the web.xml document
+	 */
 	private static HashMap<String,HttpServlet> createServlets(Handler h, MyServletContext fc) throws Exception {
 		HashMap<String,HttpServlet> servlets = new HashMap<String,HttpServlet>();
 		for (String servletName : h.m_servlets.keySet()) {
 			MyServletConfig config = new MyServletConfig(servletName, fc);
 			String className = h.m_servlets.get(servletName);
+			@SuppressWarnings("rawtypes")
 			Class servletClass = Class.forName(className);
 			HttpServlet servlet = (HttpServlet) servletClass.newInstance();
 			HashMap<String,String> servletParams = h.m_servletParams.get(servletName);
@@ -135,10 +168,16 @@ public class MyServerServlets {
 			servlets.put(servletName + '/', servlet);
 			servlets.put('/' + servletName + '/', servlet);
 		}
-		
+		fc.servlets = servlets;//saves all the servlets in context
 		return servlets;
 	}
-	
+		
+	/**
+	 * @param args
+	 * @throws Exception
+	 * Run method for the servlet container
+	 * 
+	 */
 	public void run(final String[] args) throws Exception{
 		if(args.length != 3){ //check number of args
 			System.out.println("JamesJinPark\nSeas Login Name: jamespj");
@@ -148,11 +187,20 @@ public class MyServerServlets {
 		final Path rootDir = Paths.get(args[1]); //get root directory
 		String xmlPath = rootDir + args[2];
 		
+		//log file will be created at root directory with the name "ErrorLog.txt
+		File file = new File("ErrorLog.txt");
+		if(!file.exists()){
+			file.createNewFile();
+		}
+		FileOutputStream fos = new FileOutputStream(file);
+		PrintStream ps = new PrintStream(fos);
+		System.setErr(ps);
+		
 		//check whether web.xml file exists and can be accessed
 		Handler h = parseWebdotxml(xmlPath);
 		
 		//initialize context and config
-		MyServletContext context = createContext(h);
+		final MyServletContext context = createContext(h);
 		
 		final HashMap<String,HttpServlet> servlets = createServlets(h, context);
 			
@@ -167,13 +215,14 @@ public class MyServerServlets {
 				try {
 					final Socket socket = serverSocket.accept();
 	    		   
+					//beginning of the code that threads will run
 					Runnable runnable = new Runnable() {
                	
 						@Override
 						public void run() {
-							
+									    
 							MyHttpSession httpSession = null;
-		                	   
+							
 				            //do something with connection
 				            try ( //all these are closeable by putting them in as arguments for try()
 				                    InputStreamReader reader = new InputStreamReader(socket.getInputStream());
@@ -181,8 +230,8 @@ public class MyServerServlets {
 				              ) { //this is tryInside
 				
 					    		//initialize request and response
-					    		MyHttpServletRequest request = new MyHttpServletRequest(httpSession, port);
-					    		MyHttpServletResponse response = new MyHttpServletResponse(socket, request);
+					    		MyHttpServletRequest request = new MyHttpServletRequest(httpSession, port, context);
+					    		MyHttpServletResponse response = new MyHttpServletResponse(socket, request, context);
 				
 					    		//parse request
 								String line = in.readLine();			
@@ -236,7 +285,6 @@ public class MyServerServlets {
 						    			request.setMethod(method);
 						    			
 							    		//saves all headers
-						    			System.out.println("THIS IS REQUEST");
 					    				while(true) {
 					    					line = in.readLine();
 											if (line == null || line.isEmpty()) break;
@@ -247,7 +295,7 @@ public class MyServerServlets {
 												int separator = line.indexOf(':');
 												key = line.substring(0, separator).trim(); //Host
 												value = line.substring(separator + 1).trim(); //localhost:90
-												System.out.println(line);
+												System.err.println(line);
 											}catch(Exception e){
 												System.err.println("Could not parse header: " + line + " " + e);
 											}	
@@ -262,7 +310,7 @@ public class MyServerServlets {
 							    				int length = request.getContentLength();
 								    			if(length > 0 ){
 								    				char[] buf = new char[1024];	
-								    				int count = in.read(buf, 0, length);
+								    				in.read(buf, 0, length);
 								    				request.setBody(String.valueOf(buf));
 								    			}
 											} else{
@@ -275,7 +323,12 @@ public class MyServerServlets {
 									    		}
 							    			}
 						    			}
-						    			servlet.service(request, response);
+						    			try{
+						    				servlet.service(request, response);
+						    			} catch(ServletException e){
+						    				e.printStackTrace();
+						    				response.sendError(500);
+						    			}
 						    			
 							    		if(response.flushed == false){//if the servlet has not flushed the buffer
 						    				response.getWriter().flush();						    				
@@ -289,23 +342,19 @@ public class MyServerServlets {
 					    		}
 							
 					            } catch (IOException e) {
-									// TODO Auto-generated catch block
 									e.printStackTrace();
 								} catch (InterruptedException e) {
-									// TODO Auto-generated catch block
-									e.printStackTrace();
-								} catch (ServletException e) {
-									// TODO Auto-generated catch block
 									e.printStackTrace();
 								}
 				    	   }
-		                   
 						}; //ends runnable
 			       	threads.run(runnable);//adds this instance of runnable (request) to the queue of the thread pool
 					} catch(Exception e){	
+			            System.err.println(e);
 					}
 			}//end of while loop
 				threads.killAllThreads();
+				shutdownServlets(context);
 				serverSocket.close();
 			} catch (Exception e) {
 	            System.err.println("Error! Could not connect to socket:");
@@ -334,5 +383,17 @@ public class MyServerServlets {
 	        }
 	       System.out.println("Successfully shut down server.");
            System.exit(0); //server shuts down correctly
+	}
+	
+	/**
+	 * @param context
+	 * Shuts down all servlets by invoking each of their destroy methods
+	 */
+	public void shutdownServlets(MyServletContext context){
+		for(String servletKey: context.servlets.keySet()){
+			HttpServlet servlet = context.servlets.get(servletKey);
+			System.out.println("Deactiviting servlet: " + servlet.getServletName());
+			servlet.destroy();
+		}		
 	}
 }

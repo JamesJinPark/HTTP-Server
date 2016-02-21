@@ -3,9 +3,6 @@ package myServlets;
 import javax.servlet.*;
 import javax.servlet.http.*;
 
-import edu.upenn.cis455.webserver.MyHttpServletRequest;
-import edu.upenn.cis455.webserver.MyHttpServletResponse;
-
 import java.io.*;
 
 public class BusyServlet extends HttpServlet {
@@ -26,8 +23,6 @@ public class BusyServlet extends HttpServlet {
 			}
 		}
 		out.println("<P>Done!</P>");
-		out.println("</BODY></HTML>");	
-//		out.flush(); //ask TA:  for each of the servlets we have to add the flush, right? 
-//		out.close();
+		out.println("</BODY></HTML>");
 	}
 }

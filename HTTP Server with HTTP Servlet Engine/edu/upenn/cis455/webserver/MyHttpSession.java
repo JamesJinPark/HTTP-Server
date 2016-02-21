@@ -6,18 +6,28 @@ import java.util.Random;
 import javax.servlet.ServletContext;
 import javax.servlet.http.*;
 
+/**
+ * @author James Park
+ * @class cis455/555
+ * An implementation of the HttpSession interface
+ *
+ */
 public class MyHttpSession implements HttpSession{
 
 	private boolean m_valid = true;
 	private Properties m_properties = new Properties();
 	private int max_inactive_interval = 0;
 	private String id;
-	public boolean attributesExist;
+	private MyServletContext context;
 
-	MyHttpSession() {
+	/**
+	 * Constructor for MyHttpSession
+	 * generates a random number for the session id
+	 */
+	MyHttpSession(MyServletContext context) {
+		this.context = context;
 		Random rand = new Random();
 		this.id = String.valueOf(rand.nextInt(1000000 - 1));
-		this.attributesExist = false;
 	}
 	
 	@Override
@@ -55,8 +65,7 @@ public class MyHttpSession implements HttpSession{
 
 	@Override
 	public ServletContext getServletContext() {
-		// TODO Auto-generated method stub
-		return null;
+		return this.context;
 	}
 
 	@SuppressWarnings("deprecation")
@@ -83,7 +92,6 @@ public class MyHttpSession implements HttpSession{
 
 	@Override
 	public boolean isNew() {
-		// TODO Auto-generated method stub
 		return false;
 	}
 
@@ -104,8 +112,7 @@ public class MyHttpSession implements HttpSession{
 	
 	@Override
 	public void setAttribute(String arg0, Object arg1) {
-		this.attributesExist = true;
-		m_properties.put(arg0, arg1);		
+		m_properties.put(arg0, arg1);
 	}
 
 	@Override
