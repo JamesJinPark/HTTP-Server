@@ -9,6 +9,14 @@ public class RunAllTests extends TestCase {
         public static Test suite() {
                 Class[] testClasses = {
                                 MyServerServletsTest.class,
+                                BlockingQueueTest.class,
+                                DefaultRequestParserTest.class,
+                                MyHttpSessionTest.class,
+                                MyServletConfigTest.class,
+                                MyServletContextTest.class,
+                                MyHttpServletRequestTest.class,
+                                //MyHttpServletResponseTest.class,
+
                 };
                 return new TestSuite(testClasses);
         }

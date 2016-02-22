@@ -38,9 +38,15 @@ public class MyHttpServletRequest implements HttpServletRequest {
 	private String requestURI;
 	public MyServletContext context;
 	
-	MyHttpServletRequest() { }
+	public MyHttpServletRequest() { }
 	
-	MyHttpServletRequest(MyHttpSession session, int port, MyServletContext context) {
+	/**
+	 * @param MyHttpSession session
+	 * @param in port
+	 * @param MyServletContext context
+	 * Constructor for MyHttpServletRequest
+	 */
+	public MyHttpServletRequest(MyHttpSession session, int port, MyServletContext context) {
 		this.m_session = session;
 		this.port = port; 
 		this.context = context;
@@ -62,6 +68,10 @@ public class MyHttpServletRequest implements HttpServletRequest {
 		return "ISO-8859-1";
 	}
 
+	/* (non-Javadoc)
+	 * @see javax.servlet.ServletRequest#getContentLength()
+	 * returns content lenght from headers.  If no header, returns -1.
+	 */
 	@Override
 	public int getContentLength() {
 		if(m_headers.get("Content-Length") != null){
@@ -123,6 +133,10 @@ public class MyHttpServletRequest implements HttpServletRequest {
 		return m_params.keys();
 	}
 
+	/* (non-Javadoc)
+	 * @see javax.servlet.ServletRequest#getParameterValues(java.lang.String)
+	 * returns a String array of the values in parameters
+	 */
 	@Override
 	public String[] getParameterValues(String arg0) {
 		Object[] objects = m_params.values().toArray();
@@ -144,6 +158,10 @@ public class MyHttpServletRequest implements HttpServletRequest {
 		this.version = version;
 	}
 
+	/* (non-Javadoc)
+	 * @see javax.servlet.ServletRequest#getReader()
+	 * returns a reader to this request body
+	 */
 	@Override
 	public BufferedReader getReader() throws IOException {
 		BufferedReader reader = new BufferedReader(new StringReader(this.m_body));
@@ -220,6 +238,10 @@ public class MyHttpServletRequest implements HttpServletRequest {
 		return null;
 	}
 
+	/* (non-Javadoc)
+	 * @see javax.servlet.http.HttpServletRequest#getCookies()
+	 * returns an array of Cookies.  parses strings in the headers to form key/value pairs for cookies
+	 */
 	@Override
 	public Cookie[] getCookies() {
 		String cookiesString = m_headers.get("Cookie");
@@ -259,6 +281,10 @@ public class MyHttpServletRequest implements HttpServletRequest {
 		return (Enumeration)m_headers.values();
 	}
 
+	/* (non-Javadoc)
+	 * @see javax.servlet.http.HttpServletRequest#getIntHeader(java.lang.String)
+	 * gets header that holds a string that must be converted to an int
+	 */
 	@Override
 	public int getIntHeader(String arg0) {
 		if(this.m_headers.get(arg0) == null){
@@ -333,6 +359,11 @@ public class MyHttpServletRequest implements HttpServletRequest {
 		return null;
 	}
 
+	/* (non-Javadoc)
+	 * @see javax.servlet.http.HttpServletRequest#getSession(boolean)
+	 * returns a session if client sent a JSESSIONID cookie.  else returns a new session if set to true.
+	 * returns null if set to false unless session already exists.
+	 */
 	@Override
 	public HttpSession getSession(boolean bool) {
 		

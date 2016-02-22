@@ -52,11 +52,11 @@ public class BlockingQueue<E>{
 		return this.queue.poll();
 	}
 	
-	private boolean isEmpty(){
+	public boolean isEmpty(){
 		return this.queue.size() == 0;
 	}
 
-	private boolean isFull(){
+	public boolean isFull(){
 		return this.queue.size() == this.maxLength;
 	}
 

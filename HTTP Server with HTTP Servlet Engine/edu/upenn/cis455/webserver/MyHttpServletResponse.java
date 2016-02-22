@@ -140,7 +140,7 @@ public class MyHttpServletResponse implements HttpServletResponse{
 	 * @param MyServletContext context
 	 * Constructor for HttpServletResponse
 	 */
-	MyHttpServletResponse (Socket socket, MyHttpServletRequest request, MyServletContext context){
+	public MyHttpServletResponse (Socket socket, MyHttpServletRequest request, MyServletContext context){
 		this.request = request;
 		this.context = context;
 		this.socket = socket;

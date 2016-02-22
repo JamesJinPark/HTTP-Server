@@ -16,7 +16,7 @@ public class MyHttpSession implements HttpSession{
 
 	private boolean m_valid = true;
 	private Properties m_properties = new Properties();
-	private int max_inactive_interval = 0;
+	public int max_inactive_interval = 0;
 	private String id;
 	private MyServletContext context;
 
@@ -24,7 +24,7 @@ public class MyHttpSession implements HttpSession{
 	 * Constructor for MyHttpSession
 	 * generates a random number for the session id
 	 */
-	MyHttpSession(MyServletContext context) {
+	public MyHttpSession(MyServletContext context) {
 		this.context = context;
 		Random rand = new Random();
 		this.id = String.valueOf(rand.nextInt(1000000 - 1));
@@ -81,8 +81,14 @@ public class MyHttpSession implements HttpSession{
 
 	@Override
 	public String[] getValueNames() {
-		// TODO Auto-generated method stub
-		return null;
+		Object[] objects = m_properties.values().toArray();
+		String[] strings = new String[objects.length];
+		int i = 0;
+		for (Object object: objects){
+			strings[i] = object.toString();
+			i++;
+		}
+		return strings;		
 	}
 
 	@Override
@@ -120,7 +126,7 @@ public class MyHttpSession implements HttpSession{
 		this.max_inactive_interval = arg0;
 	}
 
-	boolean isValid() {
+	public boolean isValid() {
 		return m_valid;
 	}
 
