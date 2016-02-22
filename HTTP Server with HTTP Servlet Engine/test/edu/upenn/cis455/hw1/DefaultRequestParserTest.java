@@ -9,8 +9,6 @@ import java.io.PrintStream;
 import java.io.Reader;
 import java.text.ParseException;
 
-import org.junit.Test;
-
 import edu.upenn.cis455.webserver.DefaultRequestParser;
 import junit.framework.TestCase;
 

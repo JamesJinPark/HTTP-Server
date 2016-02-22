@@ -1,12 +1,9 @@
 package test.edu.upenn.cis455.hw1;
 
 import java.util.Enumeration;
-import java.util.Vector;
 
 import junit.framework.TestCase;
 import edu.upenn.cis455.webserver.MyServletContext;
-
-import org.junit.Test;
 
 public class MyServletContextTest extends TestCase {
 	MyServletContext context = new MyServletContext();

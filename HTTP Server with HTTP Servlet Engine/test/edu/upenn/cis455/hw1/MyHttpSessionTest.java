@@ -2,8 +2,6 @@ package test.edu.upenn.cis455.hw1;
 
 import junit.framework.TestCase;
 
-import org.junit.Test;
-
 import edu.upenn.cis455.webserver.MyHttpSession;
 import edu.upenn.cis455.webserver.MyServletContext;
 
